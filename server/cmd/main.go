@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"golang.org/x/exp/slog"
 
@@ -29,8 +30,16 @@ func main() {
 		slog.String("build date", buildDate),
 	)
 
-	_, err = service.New(cfg.Service, logger)
+	storage, err := buildStorage(cfg.Storage)
+	noErrorOrExit(err, logger)
+
+	_, err = service.New(cfg.Service, storage, logger)
+	noErrorOrExit(err, logger)
+}
+
+func noErrorOrExit(err error, log *slog.Logger) {
 	if err != nil {
-		logger.Error("main", sl.Error(err))
+		log.Error("main", sl.Error(err))
+		os.Exit(1)
 	}
 }

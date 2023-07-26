@@ -9,6 +9,8 @@ import (
 
 	"github.com/Karzoug/goph_keeper/pkg/logger/slog/pretty"
 	"github.com/Karzoug/goph_keeper/server/internal/config"
+	"github.com/Karzoug/goph_keeper/server/internal/repository/storage"
+	"github.com/Karzoug/goph_keeper/server/internal/service"
 )
 
 func buildConfig() (*config.Config, error) {
@@ -47,4 +49,8 @@ func buildLogger(env config.EnvType) *slog.Logger {
 	}
 
 	return log
+}
+
+func buildStorage(cfg storage.Config) (service.Storage, error) {
+	panic("not implemented")
 }
