@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package common.grpc;
+
+option go_package = "common/grpc";
+
+message RegisterRequest {
+    string email = 1;
+    bytes  hash = 2;
+}
+
+message RegisterResponse {
+}
+
+message LoginRequest {
+    string email = 1;
+    bytes  hash = 2;
+}
+
+message LoginResponse {
+    string token = 1;
+}
+
+service GophKeeperService {
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc Login(LoginRequest) returns (LoginResponse);
+  }
