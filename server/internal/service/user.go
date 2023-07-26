@@ -55,6 +55,12 @@ func (s *Service) Login(ctx context.Context, email string, hash []byte) (string,
 	return tokenString, nil
 }
 
+func (s *Service) AuthUser(ctx context.Context, tokenString string) (string, error) {
+	const op = "service: auth user"
+
+	panic("not implemented")
+}
+
 func (s *Service) getUser(ctx context.Context, email string, hash []byte) (user.User, error) {
 	const op = "get user"
 
