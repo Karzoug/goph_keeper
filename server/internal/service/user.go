@@ -3,12 +3,15 @@ package service
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/Karzoug/goph_keeper/pkg/e"
+	"github.com/Karzoug/goph_keeper/server/internal/model/auth/token"
 	"github.com/Karzoug/goph_keeper/server/internal/model/user"
 	"github.com/Karzoug/goph_keeper/server/internal/repository/storage"
 )
 
+// Register registers a new user.
 func (s *Service) Register(ctx context.Context, email string, hash []byte) error {
 	const op = "service: register user"
 
@@ -37,6 +40,7 @@ func (s *Service) Register(ctx context.Context, email string, hash []byte) error
 	return nil
 }
 
+// Login logs in a user.
 func (s *Service) Login(ctx context.Context, email string, hash []byte) (string, error) {
 	const op = "service: login user"
 
@@ -49,19 +53,36 @@ func (s *Service) Login(ctx context.Context, email string, hash []byte) (string,
 		return "", ErrUserEmailNotVerified
 	}
 
-	// TODO: generate token
-	tokenString := ""
+	tokenString, err := s.setUserToAuthCache(ctx, u)
 
 	return tokenString, nil
 }
 
+// AuthUser verifies user's token and returns the email if success.
 func (s *Service) AuthUser(ctx context.Context, tokenString string) (string, error) {
 	const op = "service: auth user"
 
-	panic("not implemented")
+	token, err := token.FromString(tokenString, s.cfg.Token.SecretKey)
+	if err != nil {
+		return "", e.Wrap(op, ErrUserInvalidToken)
+	}
+	if token.IsExpired() {
+		return "", e.Wrap(op, ErrUserNeedAuthentication)
+	}
+
+	email, err := s.caches.auth.Get(ctx, token.ID())
+	if err != nil {
+		if errors.Is(err, storage.ErrRecordNotFound) {
+			return "", e.Wrap(op, ErrUserNeedAuthentication)
+		}
+		return "", e.Wrap(op, err)
+	}
+
+	return email, nil
 }
 
-func (s *Service) getUser(ctx context.Context, email string, hash []byte) (user.User, error) {
+// getUser returns user by email and auth hash.
+func (s *Service) getUser(ctx context.Context, email string, authHash []byte) (user.User, error) {
 	const op = "get user"
 
 	u, err := s.storage.GetUser(ctx, email)
@@ -71,8 +92,21 @@ func (s *Service) getUser(ctx context.Context, email string, hash []byte) (user.
 		}
 		return user.User{}, e.Wrap(op, err)
 	}
-	if !u.AuthKey.Verify(hash) {
+	if !u.AuthKey.Verify(authHash) {
 		return user.User{}, ErrUserInvalidHash
 	}
 	return u, nil
+}
+
+// setUserToAuthCache adds user email to auth cache and returns token.
+func (s *Service) setUserToAuthCache(ctx context.Context, u user.User) (string, error) {
+	eTime := time.Now().Add(s.cfg.Token.TokenLifetime)
+
+	t := token.New(eTime, s.cfg.Token.SecretKey)
+	err := s.caches.auth.Set(ctx, t.ID(), u.Email, eTime.Sub(time.Now()))
+	if err != nil {
+		return "", err
+	}
+
+	return t.String(), nil
 }
