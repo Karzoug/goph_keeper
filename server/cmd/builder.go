@@ -19,7 +19,8 @@ func buildConfig() (*config.Config, error) {
 	opts := env.Options{
 		Prefix: "GOPHKEEPER_",
 		FuncMap: map[reflect.Type]env.ParserFunc{
-			reflect.TypeOf(cfg.Env): config.EnvTypeParserFunc},
+			reflect.TypeOf(cfg.Env):          config.EnvTypeParserFunc,
+			reflect.TypeOf(cfg.Storage.Type): storage.TypeParserFunc},
 	}
 
 	return cfg, env.ParseWithOptions(cfg, opts)
