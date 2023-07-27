@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"net/mail"
+	"time"
 
 	"github.com/Karzoug/goph_keeper/server/internal/model/auth"
 )
@@ -17,6 +18,7 @@ type User struct {
 	Email           string
 	IsEmailVerified bool
 	AuthKey         auth.Key
+	CreatedAt       time.Time
 }
 
 // New returns a new user.
@@ -39,5 +41,6 @@ func New(email string, authHash []byte) (User, error) {
 		Email:           email,
 		IsEmailVerified: false,
 		AuthKey:         authKey,
+		CreatedAt:       time.Now(),
 	}, nil
 }
