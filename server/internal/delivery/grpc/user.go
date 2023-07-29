@@ -10,7 +10,7 @@ import (
 )
 
 func (s *server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
-	const op = "gRPC server: register user"
+	const op = "register user"
 
 	if err := s.service.Register(ctx, req.Email, req.Hash); err != nil {
 		switch {
@@ -30,9 +30,18 @@ func (s *server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Reg
 }
 
 func (s *server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
-	const op = "gRPC server: login user"
+	const op = "login user"
 
-	token, err := s.service.Login(ctx, req.Email, req.Hash)
+	var (
+		token string
+		err   error
+	)
+	if req.EmailCode != "" {
+		token, err = s.service.LoginWithEmailCode(ctx, req.Email, req.Hash, req.EmailCode)
+	} else {
+		token, err = s.service.Login(ctx, req.Email, req.Hash)
+	}
+
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrUserInvalidHash):

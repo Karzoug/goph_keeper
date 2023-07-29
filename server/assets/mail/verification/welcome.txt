@@ -1,0 +1,8 @@
+Thanks for getting started with our GophKeeper!
+
+Copy and paste the following code in the app to activate your account: {{ . }}
+
+If you didn't create an account with GophKeeper, you can safely delete this email.
+
+Cheers,
+GophKeeper

@@ -9,12 +9,13 @@ import (
 
 	pb "github.com/Karzoug/goph_keeper/common/grpc"
 	"github.com/Karzoug/goph_keeper/pkg/e"
+	gcfg "github.com/Karzoug/goph_keeper/server/internal/config/grpc"
 	"github.com/Karzoug/goph_keeper/server/internal/delivery/grpc/interceptor/auth"
 	"github.com/Karzoug/goph_keeper/server/internal/service"
 )
 
 type server struct {
-	cfg     Config
+	cfg     gcfg.Config
 	logger  *slog.Logger
 	service *service.Service
 
@@ -22,9 +23,7 @@ type server struct {
 	pb.UnimplementedGophKeeperServiceServer
 }
 
-func New(cfg Config, service *service.Service, logger *slog.Logger) (*server, error) {
-	const op = "create gRPC server"
-
+func New(cfg gcfg.Config, service *service.Service, logger *slog.Logger) *server {
 	publicMethods := []string{
 		pb.GophKeeperService_Register_FullMethodName,
 		pb.GophKeeperService_Login_FullMethodName,
@@ -36,20 +35,20 @@ func New(cfg Config, service *service.Service, logger *slog.Logger) (*server, er
 
 	ss := &server{
 		cfg:        cfg,
-		logger:     logger,
+		logger:     logger.With("from", "grpc server"),
 		service:    service,
 		grpcServer: grpcServer,
 	}
 
 	pb.RegisterGophKeeperServiceServer(ss.grpcServer, ss)
 
-	return ss, nil
+	return ss
 }
 
 func (s *server) Run(ctx context.Context) error {
-	const op = "gRPC server: run"
+	const op = "run"
 
-	s.logger.Info("running gRPC server", slog.String("address", s.cfg.Address))
+	s.logger.Info("running", slog.String("address", s.cfg.Address))
 
 	idleConnsClosed := make(chan struct{})
 
@@ -75,7 +74,7 @@ func (s *server) Run(ctx context.Context) error {
 }
 
 func (s *server) shutdown() {
-	s.logger.Info("shutting down gRPC server")
+	s.logger.Info("shutting down")
 
 	s.grpcServer.GracefulStop()
 }

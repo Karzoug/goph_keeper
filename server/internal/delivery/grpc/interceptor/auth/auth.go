@@ -32,6 +32,8 @@ func AuthUnaryServerInterceptor(authFunc AuthFunc, publicMethods []string, logge
 		return false
 	}
 
+	logger = logger.With("from", "auth grpc interceptor")
+
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		if isPublicMethodCheckFnc(info.FullMethod) {
 			return handler(ctx, req)
@@ -55,7 +57,7 @@ func AuthUnaryServerInterceptor(authFunc AuthFunc, publicMethods []string, logge
 			case errors.Is(err, service.ErrUserNeedAuthentication):
 				return nil, gerr.ErrUserNeedAuthentication
 			default:
-				logger.Error("gRPC auth user failed", sl.Error(err))
+				logger.Error("auth user failed", sl.Error(err))
 				return nil, gerr.ErrInternal
 			}
 		}

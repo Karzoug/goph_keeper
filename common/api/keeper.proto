@@ -15,6 +15,7 @@ message RegisterResponse {
 message LoginRequest {
     string email = 1;
     bytes  hash = 2;
+    string email_code = 3;
 }
 
 message LoginResponse {

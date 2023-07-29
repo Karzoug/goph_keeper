@@ -1,13 +1,15 @@
 package main
 
 import (
+	"context"
 	"log"
-	"os"
+	"os/signal"
+	"syscall"
 
 	"golang.org/x/exp/slog"
 
 	"github.com/Karzoug/goph_keeper/pkg/logger/slog/sl"
-	"github.com/Karzoug/goph_keeper/server/internal/service"
+	"github.com/Karzoug/goph_keeper/server/internal/app"
 )
 
 var (
@@ -22,6 +24,7 @@ func main() {
 	}
 
 	logger := buildLogger(cfg.Env)
+	slog.SetDefault(logger)
 
 	logger.Info(
 		"starting goph-keeper server",
@@ -30,16 +33,10 @@ func main() {
 		slog.String("build date", buildDate),
 	)
 
-	storage, err := buildStorage(cfg.Storage)
-	noErrorOrExit(err, logger)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
 
-	_, err = service.New(cfg.Service, storage, logger)
-	noErrorOrExit(err, logger)
-}
-
-func noErrorOrExit(err error, log *slog.Logger) {
-	if err != nil {
-		log.Error("main", sl.Error(err))
-		os.Exit(1)
+	if err := app.Run(ctx, cfg, logger); err != nil {
+		logger.Error("application stopped with error", sl.Error(err))
 	}
 }
