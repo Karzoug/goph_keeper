@@ -42,6 +42,9 @@ func (s *Service) Register(ctx context.Context, email string, hash []byte) error
 	}
 
 	tsk, err := task.NewWelcomeVerificationEmailTask(u.Email, code)
+	if err != nil {
+		return e.Wrap(op, err)
+	}
 	err = s.rtaskClient.Enqueue(tsk, emailSendingTimeout)
 	if err != nil {
 		return e.Wrap(op, err)
@@ -74,6 +77,9 @@ func (s *Service) Login(ctx context.Context, email string, hash []byte) (string,
 	}
 
 	tokenString, err := s.setUserToAuthCache(ctx, u)
+	if err != nil {
+		return "", e.Wrap(op, err)
+	}
 
 	return tokenString, nil
 }
@@ -91,7 +97,7 @@ func (s *Service) LoginWithEmailCode(ctx context.Context, email string, hash []b
 	if err != nil {
 		return "", e.Wrap(op, err)
 	}
-	defer s.caches.mail.Delete(ctx, email)
+	defer s.caches.mail.Delete(ctx, email) // nolint:errcheck // it's safe: this record has TTL
 
 	if ccode != code {
 		return "", ErrUserEmailNotVerified
@@ -156,7 +162,7 @@ func (s *Service) setUserToAuthCache(ctx context.Context, u user.User) (string, 
 	eTime := time.Now().Add(s.cfg.Token.TokenLifetime)
 
 	t := token.New(eTime, s.cfg.Token.SecretKey)
-	err := s.caches.auth.Set(ctx, t.ID(), u.Email, eTime.Sub(time.Now()))
+	err := s.caches.auth.Set(ctx, t.ID(), u.Email, time.Until(eTime))
 	if err != nil {
 		return "", err
 	}

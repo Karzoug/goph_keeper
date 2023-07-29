@@ -31,8 +31,10 @@ func New(cfg smtp.Config) (*client, error) {
 	server.ConnectTimeout = 10 * time.Second
 	server.SendTimeout = 10 * time.Second
 
-	// TODO: add TLSConfig to provide custom TLS configuration.
-	server.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	server.TLSConfig = &tls.Config{
+		ServerName: server.Host,
+		MinVersion: tls.VersionTLS13,
+	}
 
 	smtpClient, err := server.Connect()
 	if err != nil {

@@ -2,7 +2,6 @@ package rtask
 
 import (
 	"context"
-	"errors"
 
 	"github.com/hibiken/asynq"
 	"golang.org/x/exp/slog"
@@ -12,8 +11,6 @@ import (
 	"github.com/Karzoug/goph_keeper/server/internal/service"
 	"github.com/Karzoug/goph_keeper/server/internal/service/task"
 )
-
-var errUnsupportedStorageType = errors.New("unsupported storage type")
 
 type server struct {
 	logger  *slog.Logger

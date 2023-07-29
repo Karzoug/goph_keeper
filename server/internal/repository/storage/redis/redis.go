@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -34,7 +35,7 @@ func (q *client) Get(ctx context.Context, key string) (string, error) {
 	const op = "redis: get"
 
 	val, err := q.rdb.Get(ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return "", e.Wrap(op, storage.ErrRecordNotFound)
 	}
 	return val, e.Wrap(op, err)
@@ -45,7 +46,6 @@ func (q *client) Set(ctx context.Context, key, value string, expiration time.Dur
 	const op = "redis: set"
 
 	return e.Wrap(op, q.rdb.Set(ctx, key, value, expiration).Err())
-
 }
 
 // Delete deletes value by key.
