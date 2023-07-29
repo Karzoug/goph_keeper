@@ -6,18 +6,24 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/Karzoug/goph_keeper/pkg/e"
+	sconfig "github.com/Karzoug/goph_keeper/server/internal/config/storage"
 )
 
-const duplicateKeyErrorCode = "1555"
+const (
+	// SQLite uses the "file:" URI syntax to identify database files,
+	// see: https://www.sqlite.org/uri.html
+	URIPreffix            = "file:"
+	duplicateKeyErrorCode = "1555"
+)
 
 type storage struct {
 	db *sql.DB
 }
 
-func New(dsnURI string) (*storage, error) {
+func New(cfg sconfig.Config) (*storage, error) {
 	op := "create sqlite storage"
 
-	db, err := sql.Open("sqlite", dsnURI)
+	db, err := sql.Open("sqlite", cfg.URI)
 	if err != nil {
 		return nil, e.Wrap(op, err)
 	}
@@ -29,4 +35,10 @@ func New(dsnURI string) (*storage, error) {
 	return &storage{
 		db: db,
 	}, nil
+}
+
+func (s *storage) Close() error {
+	const op = "sqlite: close"
+
+	return e.Wrap(op, s.db.Close())
 }
