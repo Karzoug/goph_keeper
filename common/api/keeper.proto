@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "google/protobuf/timestamp.proto";
+
 package common.grpc;
 
 option go_package = "common/grpc";
@@ -22,7 +24,41 @@ message LoginResponse {
     string token = 1;
 }
 
+enum IType {
+    UNKNOWN = 0;
+    PASSWORD = 1;
+	CARD = 2;
+	TEXT = 3;
+	BINARY = 4;
+    BINARY_LARGE = 5;
+  }
+
+message VaultItem {
+    string name = 1;
+	IType itype = 2;
+	bytes value = 3;
+    google.protobuf.Timestamp updated_at = 4;
+}
+
+message ListVaultItemsRequest {
+    google.protobuf.Timestamp since = 1;
+}
+
+message ListVaultItemsResponse {
+    google.protobuf.Timestamp last_update = 1;
+    repeated VaultItem items = 2;
+}
+
+message SetVaultItemRequest {
+    VaultItem item = 1;
+}
+
+message SetVaultItemResponse {
+}
+
 service GophKeeperService {
     rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
+    rpc ListVaultItems(ListVaultItemsRequest) returns (ListVaultItemsResponse);
+    rpc SetVaultItem(SetVaultItemRequest) returns (SetVaultItemResponse);
   }

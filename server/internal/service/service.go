@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/exp/slog"
 
+	"github.com/Karzoug/goph_keeper/common/model/vault"
 	scfg "github.com/Karzoug/goph_keeper/server/internal/config/service"
 	"github.com/Karzoug/goph_keeper/server/internal/model/user"
 	"github.com/Karzoug/goph_keeper/server/internal/repository/mail"
@@ -18,6 +19,8 @@ type Storage interface {
 	AddUser(context.Context, user.User) error
 	GetUser(ctx context.Context, email string) (user.User, error)
 	UpdateUser(context.Context, user.User) error
+	SetVaultItem(ctx context.Context, email string, item vault.Item) error
+	ListVaultItems(ctx context.Context, email string, since *time.Time) ([]vault.Item, error)
 	Close() error
 }
 
@@ -36,8 +39,9 @@ type mailSender interface {
 type Option func(*Service)
 
 type caches struct {
-	auth kvStorage
-	mail kvStorage
+	auth       kvStorage
+	mail       kvStorage
+	lastUpdate kvStorage
 }
 
 type Service struct {
@@ -77,6 +81,9 @@ func New(cfg scfg.Config,
 	if s.caches.mail == nil {
 		s.caches.mail = smap.New(30 * time.Minute)
 	}
+	if s.caches.mail == nil {
+		s.caches.lastUpdate = smap.New(30 * time.Minute)
+	}
 
 	s.logger = s.logger.With("from", "service")
 
@@ -98,5 +105,11 @@ func WithAuthCache(cache kvStorage) Option {
 func WithMailCache(cache kvStorage) Option {
 	return func(s *Service) {
 		s.caches.mail = cache
+	}
+}
+
+func WithLastUpdateCache(cache kvStorage) Option {
+	return func(s *Service) {
+		s.caches.lastUpdate = cache
 	}
 }
