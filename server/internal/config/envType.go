@@ -1,6 +1,9 @@
 package config
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 const (
 	// EnvDevelopment is a constant defining the development environment.
@@ -35,10 +38,10 @@ func (e EnvType) String() string {
 
 // EnvTypeParserFunc is a function that parses the environment variable string.
 var EnvTypeParserFunc = func(v string) (interface{}, error) {
-	switch v {
-	case envDevelopmentString:
+	switch {
+	case strings.HasPrefix(v, "dev"):
 		return EnvDevelopment, nil
-	case envProductionString:
+	case strings.HasPrefix(v, "prod"):
 		return EnvProduction, nil
 	}
 	return nil, ErrUnknownEnv

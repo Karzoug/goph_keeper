@@ -81,7 +81,7 @@ func New(cfg scfg.Config,
 	if s.caches.mail == nil {
 		s.caches.mail = smap.New(30 * time.Minute)
 	}
-	if s.caches.mail == nil {
+	if s.caches.lastUpdate == nil {
 		s.caches.lastUpdate = smap.New(30 * time.Minute)
 	}
 

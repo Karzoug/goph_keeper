@@ -6,6 +6,8 @@ import (
 	"errors"
 	"time"
 
+	"golang.org/x/exp/slog"
+
 	"github.com/Karzoug/goph_keeper/pkg/e"
 	"github.com/Karzoug/goph_keeper/server/internal/model/auth/token"
 	"github.com/Karzoug/goph_keeper/server/internal/model/user"
@@ -41,15 +43,6 @@ func (s *Service) Register(ctx context.Context, email string, hash []byte) error
 		return e.Wrap(op, err)
 	}
 
-	tsk, err := task.NewWelcomeVerificationEmailTask(u.Email, code)
-	if err != nil {
-		return e.Wrap(op, err)
-	}
-	err = s.rtaskClient.Enqueue(tsk, emailSendingTimeout)
-	if err != nil {
-		return e.Wrap(op, err)
-	}
-
 	err = s.storage.AddUser(ctx, u)
 	if err != nil {
 		switch {
@@ -59,6 +52,17 @@ func (s *Service) Register(ctx context.Context, email string, hash []byte) error
 			return e.Wrap(op, err)
 		}
 	}
+
+	tsk, err := task.NewWelcomeVerificationEmailTask(u.Email, code)
+	if err != nil {
+		return e.Wrap(op, err)
+	}
+	err = s.rtaskClient.Enqueue(tsk, emailSendingTimeout)
+	if err != nil {
+		return e.Wrap(op, err)
+	}
+
+	s.logger.Debug("user successfully added to storage", slog.String("email", u.Email))
 
 	return nil
 }
@@ -97,7 +101,6 @@ func (s *Service) LoginWithEmailCode(ctx context.Context, email string, hash []b
 	if err != nil {
 		return "", e.Wrap(op, err)
 	}
-	defer s.caches.mail.Delete(ctx, email) // nolint:errcheck // it's safe: this record has TTL
 
 	if ccode != code {
 		return "", ErrUserEmailNotVerified

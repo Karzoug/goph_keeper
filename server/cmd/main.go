@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"os/signal"
 	"syscall"
 
@@ -38,5 +39,6 @@ func main() {
 
 	if err := app.Run(ctx, cfg, logger); err != nil {
 		logger.Error("application stopped with error", sl.Error(err))
+		os.Exit(1)
 	}
 }

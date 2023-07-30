@@ -29,6 +29,7 @@ func New(cfg gcfg.Config, service *service.Service, logger *slog.Logger) *server
 		pb.GophKeeperService_Login_FullMethodName,
 	}
 
+	// add TLS
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(
 			auth.AuthUnaryServerInterceptor(service.AuthUser, publicMethods, logger)))
