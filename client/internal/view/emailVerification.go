@@ -50,6 +50,6 @@ func updateEmailVerificationView(v *view, msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-func viewEmailVerificationView(v view, b *strings.Builder) {
-	fmt.Fprintf(b, "Enter the code from mail:\n\n%s\n\n", v.subviews.emailVerification.textInput.View())
+func viewEmailVerificationView(v emailVerificationView, b *strings.Builder) {
+	fmt.Fprintf(b, "Enter the code from mail:\n\n%s\n\n", v.textInput.View())
 }

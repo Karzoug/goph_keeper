@@ -45,18 +45,18 @@ func initialRegisterView() registerView {
 	return m
 }
 
-func viewRegisterView(v view, b *strings.Builder) {
+func viewRegisterView(v registerView, b *strings.Builder) {
 	b.WriteString("Enter your email and password to register:\n")
 
-	for i := range v.subviews.register.inputs {
-		b.WriteString(v.subviews.register.inputs[i].View())
-		if i < len(v.subviews.register.inputs)-1 {
+	for i := range v.inputs {
+		b.WriteString(v.inputs[i].View())
+		if i < len(v.inputs)-1 {
 			b.WriteRune('\n')
 		}
 	}
 
 	button := &blurredButton
-	if v.subviews.register.focusIndex == len(v.subviews.register.inputs) {
+	if v.focusIndex == len(v.inputs) {
 		button = &focusedButton
 	}
 	fmt.Fprintf(b, "\n\n%s\n\n", *button)

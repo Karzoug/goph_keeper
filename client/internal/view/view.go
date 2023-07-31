@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	tickerDuration                = 5 * time.Second
+	notificationTickerInterval    = 5 * time.Second
 	notificationVisibilityTimeout = 15 * time.Second
 )
 
@@ -123,13 +123,13 @@ func (v view) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := updateLoginView(&v, msg)
 		return v, cmd
 	case listItems:
-		cmd := updateListItems(&v, msg)
+		cmd := updateListItemsView(&v, msg)
 		return v, cmd
 	case emailVerification:
 		cmd := updateEmailVerificationView(&v, msg)
 		return v, cmd
 	case item:
-		cmd := updateItem(&v, msg)
+		cmd := updateItemView(&v, msg)
 		return v, cmd
 	}
 
@@ -143,15 +143,15 @@ func (v view) View() string {
 
 	switch v.currentViewType {
 	case register:
-		viewRegisterView(v, b)
+		viewRegisterView(v.subviews.register, b)
 	case login:
-		viewLoginView(v, b)
+		viewLoginView(v.subviews.login, b)
 	case emailVerification:
-		viewEmailVerificationView(v, b)
+		viewEmailVerificationView(v.subviews.emailVerification, b)
 	case listItems:
-		viewListItemsView(v, b)
+		viewListItemsView(v.subviews.listItems, b)
 	case item:
-		viewItemView(v, b)
+		viewItemView(v.subviews.item, b)
 	}
 
 	printStatus(b, v.currentCredsState)
@@ -170,7 +170,7 @@ func (v view) View() string {
 }
 
 func tick() tea.Cmd {
-	return tea.Tick(tickerDuration, func(time.Time) tea.Msg {
+	return tea.Tick(notificationTickerInterval, func(time.Time) tea.Msg {
 		return tickMsg{}
 	})
 }

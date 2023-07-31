@@ -46,12 +46,12 @@ func initialListItemsView() listItemsView {
 	}
 }
 
-func viewListItemsView(v view, b *strings.Builder) {
+func viewListItemsView(v listItemsView, b *strings.Builder) {
 	fmt.Fprint(b, "Your vault:\n")
-	b.WriteString(baseStyle.Render(v.subviews.listItems.table.View()) + "\n")
+	b.WriteString(baseStyle.Render(v.table.View()) + "\n")
 }
 
-func updateListItems(v *view, msg tea.Msg) tea.Cmd {
+func updateListItemsView(v *view, msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
