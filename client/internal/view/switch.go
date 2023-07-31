@@ -41,7 +41,6 @@ func switchToAnotherSubview(v *view, msg toViewMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.viewType {
 	case login:
-		v.currentCredsState = nothing
 		v.subviews.login = initialLoginView()
 		return v, initLoginView()
 	case register:
@@ -52,19 +51,20 @@ func switchToAnotherSubview(v *view, msg toViewMsg) (tea.Model, tea.Cmd) {
 		return v, initEmailVerificationView()
 	case listItems:
 		v.subviews.listItems = initialListItemsView()
-		if v.client.HasToken() && v.client.HasLocalCredintials() {
-			v.currentCredsState = online
+		switch v.currentCredsState {
+		case online:
 			return v, tea.Sequence(v.listItemsNames, v.updateListItems)
-		}
-		if v.client.HasLocalCredintials() {
-			v.currentCredsState = standalone
+		case standalone:
 			return v, v.listItemsNames
+		default:
+			return v, toLoginView
 		}
 	case item:
 		v.subviews.item = initialItemView()
-		if v.client.HasLocalCredintials() {
-			return v, nil // nil, because data loaded by cmd from list view
+		if v.currentCredsState == nothing {
+			return v, toLoginView
 		}
+		return v, nil // nil, because data loaded by cmd from list view
 	}
 
 	return v, nil

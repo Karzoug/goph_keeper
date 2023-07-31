@@ -3,16 +3,19 @@ package badger
 import (
 	"errors"
 
+	"github.com/Karzoug/goph_keeper/pkg/e"
 	"github.com/dgraph-io/badger/v3"
 )
 
 var (
-	emailDBKey   = []byte("GOPH_KEEPER_CREDS_EMAIL")
-	tokenDBKey   = []byte("GOPH_KEEPER_CREDS_TOKEN")
-	encrKeyDBKey = []byte("GOPH_KEEPER_CREDS_ENCRKEY")
+	emailDBKey   = append(appDataDBKeyPreffix, []byte("CREDS_EMAIL")...)
+	tokenDBKey   = append(appDataDBKeyPreffix, []byte("CREDS_TOKEN")...)
+	encrKeyDBKey = append(appDataDBKeyPreffix, []byte("CREDS_ENCRKEY")...)
 )
 
 func (s *Storage) SetCredentials(email, token string, encrKey []byte) error {
+	const op = "badger: set credentials"
+
 	err := s.db.Update(func(txn *badger.Txn) error {
 		err := txn.Set(emailDBKey, []byte(email))
 		if err != nil {
@@ -28,9 +31,12 @@ func (s *Storage) SetCredentials(email, token string, encrKey []byte) error {
 		}
 		return nil
 	})
-	return err
+	return e.Wrap(op, err)
 }
+
 func (s *Storage) GetCredentials() (email, token string, encrKey []byte, err error) {
+	const op = "badger: get credentials"
+
 	err = s.db.View(func(txn *badger.Txn) error {
 		emailItem, err := txn.Get(emailDBKey)
 		if err != nil {
@@ -67,12 +73,14 @@ func (s *Storage) GetCredentials() (email, token string, encrKey []byte, err err
 	})
 
 	if err != nil {
-		return "", "", nil, err
+		return "", "", nil, e.Wrap(op, err)
 	}
 
 	return
 }
 func (s *Storage) DeleteCredentials() error {
+	const op = "badger: delete credentials"
+
 	err := s.db.View(func(txn *badger.Txn) error {
 		err := txn.Delete(emailDBKey)
 		if err != nil {
@@ -88,5 +96,5 @@ func (s *Storage) DeleteCredentials() error {
 		}
 		return nil
 	})
-	return err
+	return e.Wrap(op, err)
 }

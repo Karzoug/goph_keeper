@@ -2,6 +2,7 @@ package badger
 
 import (
 	"bytes"
+	"context"
 
 	"github.com/dgraph-io/badger/v3"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/Karzoug/goph_keeper/pkg/e"
 )
 
-func (s *Storage) ListVaultItems() ([]vault.Item, error) {
+func (s *Storage) ListVaultItems(_ context.Context) ([]vault.Item, error) {
 	const op = "badger: list vault items"
 
 	res := make([]vault.Item, 0)
@@ -36,7 +37,7 @@ func (s *Storage) ListVaultItems() ([]vault.Item, error) {
 	return res, e.Wrap(op, err)
 }
 
-func (s *Storage) ListVaultItemsNames() ([]string, error) {
+func (s *Storage) ListVaultItemsNames(_ context.Context) ([]string, error) {
 	const op = "badger: list vault items names"
 
 	res := make([]string, 0)
@@ -49,7 +50,7 @@ func (s *Storage) ListVaultItemsNames() ([]string, error) {
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
 			k := item.Key()
-			if bytes.HasPrefix(k, emailDBKey) || bytes.HasPrefix(k, tokenDBKey) || bytes.HasPrefix(k, encrKeyDBKey) {
+			if bytes.HasPrefix(k, appDataDBKeyPreffix) {
 				continue
 			}
 			res = append(res, string(k)) // []byte -> string, it's copy
@@ -59,7 +60,7 @@ func (s *Storage) ListVaultItemsNames() ([]string, error) {
 	return res, e.Wrap(op, err)
 }
 
-func (s *Storage) SetVaultItem(item vault.Item) error {
+func (s *Storage) SetVaultItem(_ context.Context, item vault.Item) error {
 	const op = "badger: set vault item"
 
 	err := s.db.Update(func(txn *badger.Txn) error {
@@ -72,7 +73,7 @@ func (s *Storage) SetVaultItem(item vault.Item) error {
 	return e.Wrap(op, err)
 }
 
-func (s *Storage) SetVaultItems(items []vault.Item) error {
+func (s *Storage) SetVaultItems(_ context.Context, items []vault.Item) error {
 	const op = "badger: set vault items"
 
 	err := s.db.Update(func(txn *badger.Txn) error {

@@ -87,6 +87,10 @@ func (v view) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if cmd := updateCredsState(&v); cmd != nil {
+		return v, cmd
+	}
+
 	if _, ok := msg.(tickMsg); ok {
 		if time.Since(v.msg.time) > notificationVisibilityTimeout {
 			v.msg.msg = ""
@@ -167,6 +171,23 @@ func (v view) View() string {
 	fmt.Fprintln(b, "\n\nPress ctr + c to quit.")
 
 	return b.String()
+}
+
+func updateCredsState(v *view) tea.Cmd {
+	if v.client.HasToken() && v.client.HasLocalCredintials() {
+		v.currentCredsState = online
+		return nil
+	}
+	if v.client.HasLocalCredintials() {
+		v.currentCredsState = standalone
+		return nil
+	}
+	v.currentCredsState = nothing
+	if v.currentViewType != login {
+		return toLoginView
+	}
+
+	return nil
 }
 
 func tick() tea.Cmd {

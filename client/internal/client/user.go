@@ -75,7 +75,7 @@ func (c *Client) Login(ctx context.Context, email string, password []byte) error
 		return ErrPasswordTooShort
 	}
 
-	if err := c.setPasswordHashes(email, password); err != nil {
+	if err := c.setPasswordHashes(ctx, email, password); err != nil {
 		c.logger.Debug(op, err)
 		return ErrAppInternal
 	}
@@ -135,6 +135,17 @@ func (c *Client) VerifyEmail(ctx context.Context, code string) error {
 		c.logger.Debug(op, err)
 		return ErrAppInternal
 	}
+	return nil
+}
+
+func (c *Client) Logout(ctx context.Context) error {
+	const op = "logout user"
+
+	if err := c.credentialsStorage.DeleteCredentials(); err != nil {
+		c.logger.Debug(op, err)
+		return ErrAppInternal
+	}
+
 	return nil
 }
 

@@ -20,17 +20,23 @@ import (
 )
 
 type credentialsStorage interface {
+	// SetCredentials adds or updates email, token and encryption key.
 	SetCredentials(email, token string, encrKey []byte) error
+	//GetCredentials returns email and encryption key, or an error if they are not found.
+	// It can also return a token if it exists.
 	GetCredentials() (email, token string, encrKey []byte, err error)
+	// DeleteCredentials deletes all credentials: email, token and encryption key.
 	DeleteCredentials() error
+	// Close closes storage if applicable.
 	Close() error
 }
 
 type storage interface {
-	ListVaultItems() ([]vault.Item, error)
-	ListVaultItemsNames() ([]string, error)
-	SetVaultItem(item vault.Item) error
-	SetVaultItems(items []vault.Item) error
+	VerifyOwnerOrClearData(ctx context.Context, email string) error
+	ListVaultItems(context.Context) ([]vault.Item, error)
+	ListVaultItemsNames(context.Context) ([]string, error)
+	SetVaultItem(ctx context.Context, item vault.Item) error
+	SetVaultItems(ctx context.Context, items []vault.Item) error
 	Close() error
 }
 
@@ -65,8 +71,8 @@ func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	if err != nil {
 		return nil, e.Wrap(op, err)
 	}
-	c.storage = bs
 	c.credentialsStorage = bs
+	c.storage = bs
 
 	_ = c.getCredentials()
 
@@ -99,7 +105,7 @@ func (c *Client) HasToken() bool {
 	return len(c.credentials.token) > 0
 }
 
-func (c *Client) setPasswordHashes(email string, password []byte) error {
+func (c *Client) setPasswordHashes(ctx context.Context, email string, password []byte) error {
 	const op = "set password hashes"
 
 	defer crypto.Wipe(password) // prevent long-term storage of the password in memory
@@ -120,8 +126,15 @@ func (c *Client) setPasswordHashes(email string, password []byte) error {
 		authHash: hash,
 	}
 
-	return e.Wrap(op,
-		c.credentialsStorage.SetCredentials(email, "", encrKey))
+	if err := c.credentialsStorage.SetCredentials(email, "", encrKey); err != nil {
+		return e.Wrap(op, err)
+	}
+
+	if err := c.storage.VerifyOwnerOrClearData(ctx, email); err != nil {
+		return e.Wrap(op, err)
+	}
+
+	return nil
 }
 
 func (c *Client) setToken(token string) error {
@@ -153,9 +166,6 @@ func (c *Client) getCredentials() bool {
 		return false
 	}
 
-	if len(email) == 0 || len(encrKey) == 0 {
-		return false
-	}
 	c.credentials = credentials{
 		email:   email,
 		token:   token,
@@ -166,7 +176,7 @@ func (c *Client) getCredentials() bool {
 }
 
 func (c *Client) newContextWithAuthData(ctx context.Context) (context.Context, error) {
-	if len(c.credentials.token) == 0 {
+	if c.HasToken() {
 		return ctx, pb.ErrEmptyAuthData
 	}
 	md := metadata.New(map[string]string{"token": c.credentials.token})

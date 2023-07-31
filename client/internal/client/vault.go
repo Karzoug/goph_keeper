@@ -14,8 +14,7 @@ func (c *Client) UpdateVaultItems(ctx context.Context) error {
 
 	ctx, err := c.newContextWithAuthData(ctx)
 	if err != nil {
-		c.logger.Debug(op, err)
-		return ErrAppInternal
+		return ErrUserNeedAuthentication
 	}
 
 	// TODO: add since last update
@@ -43,7 +42,7 @@ func (c *Client) UpdateVaultItems(ctx context.Context) error {
 		}
 	}
 
-	if err := c.storage.SetVaultItems(items); err != nil {
+	if err := c.storage.SetVaultItems(ctx, items); err != nil {
 		c.logger.Debug(op, err)
 		return ErrAppInternal
 	}
@@ -54,7 +53,11 @@ func (c *Client) UpdateVaultItems(ctx context.Context) error {
 func (c *Client) ListVaultItemsNames(ctx context.Context) ([]string, error) {
 	const op = "client: list vault items names"
 
-	names, err := c.storage.ListVaultItemsNames()
+	if c.HasLocalCredintials() {
+		return nil, ErrUserNeedAuthentication
+	}
+
+	names, err := c.storage.ListVaultItemsNames(ctx)
 	if err != nil {
 		c.logger.Debug(op, err)
 		return nil, ErrAppInternal
