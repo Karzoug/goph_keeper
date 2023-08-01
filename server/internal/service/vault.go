@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/rs/xid"
+
 	"github.com/Karzoug/goph_keeper/common/model/vault"
 	"github.com/Karzoug/goph_keeper/pkg/e"
 	"github.com/Karzoug/goph_keeper/pkg/logger/slog/sl"
@@ -13,17 +15,24 @@ import (
 
 const lastUpdateCacheTTL = 24 * time.Hour
 
-func (s *Service) SetVaultItem(ctx context.Context, email string, item vault.Item) error {
+func (s *Service) SetVaultItem(ctx context.Context, email string, item vault.Item) (string, error) {
 	const op = "service: set vault item"
+
+	if len(item.ID) == 0 {
+		item.ID = xid.New().String()
+	}
 
 	err := s.storage.SetVaultItem(ctx, email, item)
 	if err != nil {
-		return e.Wrap(op, err)
+		if errors.Is(err, storage.ErrNoRecordsAffected) {
+			return "", e.Wrap(op, ErrVaultItemVersionConflict)
+		}
+		return "", e.Wrap(op, err)
 	}
-	return nil
+	return item.ID, nil
 }
 
-func (s *Service) ListVaultItems(ctx context.Context, email string, since *time.Time) ([]vault.Item, time.Time, error) {
+func (s *Service) ListVaultItems(ctx context.Context, email string, since *time.Time) ([]vault.Item, error) {
 	const op = "service: list vault items"
 
 	var oTime time.Time
@@ -41,7 +50,7 @@ func (s *Service) ListVaultItems(ctx context.Context, email string, since *time.
 				// if time in cache (on server) is older than given since date
 				// then return empty slice of items and time of last update
 				if !t.After(*since) {
-					return make([]vault.Item, 0), t, nil
+					return make([]vault.Item, 0), nil
 				}
 			}
 		}
@@ -49,12 +58,12 @@ func (s *Service) ListVaultItems(ctx context.Context, email string, since *time.
 
 	items, err := s.storage.ListVaultItems(ctx, email, since)
 	if err != nil {
-		return nil, oTime, e.Wrap(op, err)
+		return nil, e.Wrap(op, err)
 	}
 
 	for i := 0; i < len(items); i++ {
-		if items[i].UpdatedAt.After(oTime) {
-			oTime = items[i].UpdatedAt
+		if items[i].ServerUpdatedAt.After(oTime) {
+			oTime = items[i].ServerUpdatedAt
 		}
 	}
 
@@ -63,5 +72,5 @@ func (s *Service) ListVaultItems(ctx context.Context, email string, since *time.
 		s.logger.Warn(op, e.Wrap(op, err))
 	}
 
-	return items, oTime, nil
+	return items, nil
 }

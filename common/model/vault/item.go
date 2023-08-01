@@ -3,7 +3,8 @@ package vault
 import "time"
 
 const (
-	Password ItemType = iota
+	Unknown ItemType = iota
+	Password
 	Card
 	Text
 	Binary
@@ -13,8 +14,10 @@ const (
 type ItemType int32
 
 type Item struct {
-	Name      string
-	Type      ItemType
-	Value     []byte
-	UpdatedAt time.Time
+	ID              string
+	Name            string
+	Type            ItemType
+	Value           []byte
+	ServerUpdatedAt time.Time
+	ClientUpdatedAt time.Time
 }

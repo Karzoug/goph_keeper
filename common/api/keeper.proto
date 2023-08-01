@@ -34,10 +34,12 @@ enum IType {
   }
 
 message VaultItem {
-    string name = 1;
-	IType itype = 2;
-	bytes value = 3;
-    google.protobuf.Timestamp updated_at = 4;
+    string id   = 1;
+    string name = 2;
+	IType itype = 3;
+	bytes value = 4;
+    google.protobuf.Timestamp server_updated_at = 5;
+    google.protobuf.Timestamp client_updated_at = 6;
 }
 
 message ListVaultItemsRequest {
@@ -45,8 +47,7 @@ message ListVaultItemsRequest {
 }
 
 message ListVaultItemsResponse {
-    google.protobuf.Timestamp last_update = 1;
-    repeated VaultItem items = 2;
+    repeated VaultItem items = 1;
 }
 
 message SetVaultItemRequest {
@@ -54,6 +55,7 @@ message SetVaultItemRequest {
 }
 
 message SetVaultItemResponse {
+    string id   = 1;
 }
 
 service GophKeeperService {
