@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/mail"
 	"strings"
 	"unicode/utf8"
 
@@ -16,19 +17,16 @@ import (
 
 const MinPasswordLength = 8
 
-// Register registers a new user on the server with the specified email and password.
-// (!) Method wipes the password in memory to prevent long-term storage.
+// Register registers a new user on the server with the gieven email and password.
 // Method returns an error if the email or password is not valid.
+//
+// Warning(!): method wipes the given password slice to prevent long-term storage in memory.
 func (c *Client) Register(ctx context.Context, email string, password []byte) error {
 	const op = "register user"
 
 	defer crypto.Wipe(password) // prevent long-term storage of the password in memory
 
-	if len(email) == 0 {
-		return ErrInvalidEmail
-	}
-
-	if err := validateMX(email); err != nil {
+	if !isValidEmail(email) {
 		return ErrInvalidEmail
 	}
 
@@ -64,10 +62,24 @@ func (c *Client) Register(ctx context.Context, email string, password []byte) er
 	return nil
 }
 
+// Login builds local credentials. Then connects to the server:
+//
+// 1. connection error: if local vault owner email is equal to the given email,
+// saves the local credentials, application works offline,
+// otherwise it returns ErrServerInternal;
+//
+// 2. on server authentication failure:
+// does not save data, returns ErrUserNeedAuthentication;
+//
+// 3. case of unverified mail: returns ErrUserEmailNotVerified;
+//
+// 4. on success: saves the data and the received token,
+// if local vault owner email is not equal to the given email,
+// then the local vault will be cleared.
 func (c *Client) Login(ctx context.Context, email string, password []byte) error {
 	const op = "login user"
 
-	if len(email) == 0 {
+	if !isValidEmail(email) {
 		return ErrInvalidEmail
 	}
 
@@ -75,14 +87,15 @@ func (c *Client) Login(ctx context.Context, email string, password []byte) error
 		return ErrPasswordTooShort
 	}
 
-	if err := c.setPasswordHashes(ctx, email, password); err != nil {
+	hash, encrKey, err := buildPasswordHashes(ctx, email, password)
+	if err != nil {
 		c.logger.Debug(op, err)
 		return ErrAppInternal
 	}
 
 	resp, err := c.grpcClient.Login(ctx, &pb.LoginRequest{
-		Email: c.credentials.email,
-		Hash:  c.credentials.authHash,
+		Email: email,
+		Hash:  []byte(hash),
 	})
 	if err != nil {
 		switch {
@@ -90,16 +103,33 @@ func (c *Client) Login(ctx context.Context, email string, password []byte) error
 			_ = c.clearCredentials(ctx)
 			return ErrUserInvalidPassword
 		case errors.Is(err, pb.ErrUserEmailNotVerified):
+			if err := c.setCredentialsForced(ctx, email, hash, encrKey); err != nil {
+				c.logger.Debug(op, err)
+				return ErrAppInternal
+			}
 			return ErrUserEmailNotVerified
 		case errors.Is(err, pb.ErrUserNotExists):
 			_ = c.clearCredentials(ctx)
 			return ErrUserNotExists
 		default:
+			// problems with grpc,
+			// but if this is the owner of the vault, then they can try to work offline
+			if err := c.setCredentialsForOwnerOnly(ctx, email, hash, encrKey); err != nil {
+				c.logger.Debug(op, err)
+				if errors.Is(err, ErrUserNeedAuthentication) {
+					return ErrServerInternal
+				}
+				return ErrAppInternal
+			}
 			c.logger.Debug(op, err)
-			return ErrServerInternal
+			return nil
 		}
 	}
 
+	if err := c.setCredentialsForced(ctx, email, hash, encrKey); err != nil {
+		c.logger.Debug(op, err)
+		return ErrAppInternal
+	}
 	if err := c.setToken(resp.Token); err != nil {
 		c.logger.Debug(op, err)
 		return ErrAppInternal
@@ -107,8 +137,15 @@ func (c *Client) Login(ctx context.Context, email string, password []byte) error
 	return nil
 }
 
+// VerifyEmail sends a verification code to the server and
+// returns nil only if successful.
 func (c *Client) VerifyEmail(ctx context.Context, code string) error {
 	const op = "verify email"
+
+	if len(c.credentials.email) == 0 ||
+		c.credentials.authHash == nil {
+		return ErrUserNeedAuthentication
+	}
 
 	resp, err := c.grpcClient.Login(ctx, &pb.LoginRequest{
 		Email:     c.credentials.email,
@@ -147,6 +184,22 @@ func (c *Client) Logout(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func isValidEmail(email string) bool {
+	if len(email) == 0 {
+		return false
+	}
+	e, err := mail.ParseAddress(email)
+	if err != nil {
+		return false
+	}
+	email = e.Address
+	if err := validateMX(email); err != nil {
+		return false
+	}
+
+	return true
 }
 
 // validateMX validate if MX record exists for a domain.
