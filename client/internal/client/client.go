@@ -10,8 +10,7 @@ import (
 
 	"github.com/Karzoug/goph_keeper/client/internal/config"
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
-	"github.com/Karzoug/goph_keeper/client/internal/repository/storage/badger"
-	"github.com/Karzoug/goph_keeper/client/pkg/crypto"
+	sqlite "github.com/Karzoug/goph_keeper/client/internal/repository/storage/sqllite"
 	pb "github.com/Karzoug/goph_keeper/common/grpc"
 	"github.com/Karzoug/goph_keeper/pkg/e"
 )
@@ -63,8 +62,7 @@ func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 		logger: logger.With(slog.String("from", "client")),
 	}
 
-	// TODO: add other storages, add other credentials storages
-	bs, err := badger.New()
+	ss, err := sqlite.New()
 	if err != nil {
 		return nil, e.Wrap(op, err)
 	}
