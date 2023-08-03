@@ -16,6 +16,10 @@ const lastUpdateCacheTTL = 24 * time.Hour
 func (s *Service) SetVaultItem(ctx context.Context, email string, item vault.Item) (time.Time, error) {
 	const op = "service: set vault item"
 
+	if len(item.Value) > int(s.cfg.StorageMaxSizeItemValue) {
+		return time.Time{}, e.Wrap(op, ErrVaultItemValueTooBig)
+	}
+
 	err := s.storage.SetVaultItem(ctx, email, item)
 	if err != nil {
 		if errors.Is(err, storage.ErrNoRecordsAffected) {

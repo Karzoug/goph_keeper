@@ -17,4 +17,5 @@ var (
 	ErrInvalidHashFormat        = status.Error(codes.InvalidArgument, "invalid hash format")
 	ErrEmptyAuthData            = status.Error(codes.InvalidArgument, "empty auth data")
 	ErrVaultItemConflictVersion = status.Error(codes.InvalidArgument, "vault item: conflict version")
+	ErrVaultItemValueTooBig     = status.Error(codes.OutOfRange, "vault item: big value")
 )

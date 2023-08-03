@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"time"
 
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
@@ -61,6 +64,9 @@ func (c *Client) updateVaultItemsFromServer(ctx context.Context) error {
 			return ErrUserNeedAuthentication
 		default:
 			c.logger.Debug(op, err)
+			if status.Code(err) == codes.Unavailable {
+				return ErrServerUnavailable
+			}
 			return ErrServerInternal
 		}
 	}
@@ -81,7 +87,7 @@ func (c *Client) updateVaultItemsFromServer(ctx context.Context) error {
 		}
 		dbItem, err := c.storage.GetVaultItem(ctx, item.ID)
 		if err != nil {
-			if err != storage.ErrRecordNotFound {
+			if !errors.Is(err, storage.ErrRecordNotFound) {
 				c.logger.Debug(op, err)
 				return ErrAppInternal
 			}
@@ -123,43 +129,73 @@ func (c *Client) sendModifiedVaultItemsToServer(ctx context.Context) error {
 		return modifiedItems[i].ServerUpdatedAt.Unix() < modifiedItems[j].ServerUpdatedAt.Unix()
 	})
 	for i := 0; i < len(modifiedItems); i++ {
-		resp, err := c.grpcClient.SetVaultItem(ctx, &pb.SetVaultItemRequest{
-			Item: &pb.VaultItem{
-				Id:              modifiedItems[i].ID,
-				Name:            modifiedItems[i].Name,
-				Itype:           pb.IType(modifiedItems[i].Type),
-				Value:           modifiedItems[i].Value,
-				ServerUpdatedAt: timestamppb.New(modifiedItems[i].ServerUpdatedAt),
-				ClientUpdatedAt: timestamppb.New(modifiedItems[i].ClientUpdatedAt),
-			},
-		})
+		var (
+			serverTime time.Time
+			err        error
+		)
+		if modifiedItems[i].Type == cvault.BinaryLarge {
+			serverTime, err = c.sendLargeVaultItem(ctx, modifiedItems[i])
+		} else {
+			serverTime, err = c.sendVaultItem(ctx, modifiedItems[i])
+		}
 		if err != nil {
-			switch {
-			case errors.Is(err, pb.ErrEmptyAuthData),
-				errors.Is(err, pb.ErrEmptyAuthData),
-				errors.Is(err, pb.ErrUserInvalidToken),
-				errors.Is(err, pb.ErrUserNeedAuthentication):
-				return ErrUserNeedAuthentication
-			case errors.Is(err, pb.ErrVaultItemConflictVersion):
+			if errors.Is(err, ErrConflictVersion) {
 				// usually this is not happened,
 				// but if so, we need to exit here,
 				// next method iteration hadle this conflict
 				return nil
-			default:
-				c.logger.Debug(op, err)
-				return ErrServerInternal
 			}
+			return err
 		}
 
 		// if synchronization for this item was successful,
 		// update item server time
-		modifiedItems[i].ServerUpdatedAt = resp.ServerUpdatedAt.AsTime()
+		modifiedItems[i].ServerUpdatedAt = serverTime
 		if err := c.storage.SetVaultItem(ctx, modifiedItems[i]); err != nil {
 			c.logger.Debug(op, err)
 			return ErrServerInternal
 		}
 	}
 	return nil
+}
+
+func (c *Client) sendLargeVaultItem(ctx context.Context, item vault.Item) (time.Time, error) {
+	// TODO: implement me
+	panic("not implemented")
+}
+
+func (c *Client) sendVaultItem(ctx context.Context, item vault.Item) (time.Time, error) {
+	const op = "send modified small vault item to server"
+
+	resp, err := c.grpcClient.SetVaultItem(ctx, &pb.SetVaultItemRequest{
+		Item: &pb.VaultItem{
+			Id:              item.ID,
+			Name:            item.Name,
+			Itype:           pb.IType(item.Type),
+			Value:           item.Value,
+			ServerUpdatedAt: timestamppb.New(item.ServerUpdatedAt),
+			ClientUpdatedAt: timestamppb.New(item.ClientUpdatedAt),
+		},
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, pb.ErrEmptyAuthData),
+			errors.Is(err, pb.ErrEmptyAuthData),
+			errors.Is(err, pb.ErrUserInvalidToken),
+			errors.Is(err, pb.ErrUserNeedAuthentication):
+			return time.Time{}, ErrUserNeedAuthentication
+		case errors.Is(err, pb.ErrVaultItemConflictVersion):
+			return time.Time{}, ErrConflictVersion
+		default:
+			c.logger.Debug(op, err)
+			if status.Code(err) == codes.Unavailable {
+				return time.Time{}, ErrServerUnavailable
+			}
+			return time.Time{}, ErrServerInternal
+		}
+	}
+
+	return resp.ServerUpdatedAt.AsTime(), nil
 }
 
 func (c *Client) newContextWithAuthData(ctx context.Context) (context.Context, error) {

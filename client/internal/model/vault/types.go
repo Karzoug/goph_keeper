@@ -19,6 +19,16 @@ type Text struct {
 	Text string
 }
 
+type Binary struct {
+	Meta     map[string]string
+	Filename string
+}
+
+type BinaryLarge struct {
+	Meta  map[string]string
+	Value []byte
+}
+
 type IDName struct {
 	ID   string
 	Name string

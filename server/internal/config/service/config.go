@@ -19,5 +19,6 @@ type Config struct {
 		CodeLifetime time.Duration `env:"EMAIL_CODE_LIFETIME,notEmpty" envDefault:"24h"`
 	}
 	// Storage is a configuration for storage.
-	Storage storage.Config `envPrefix:"STORAGE_"`
+	Storage                 storage.Config `envPrefix:"STORAGE_"`
+	StorageMaxSizeItemValue uint           `envPrefix:"STORAGE_MAX_SIZE_ITEM_VALUE,notempty"  envDefault:"1048576"`
 }

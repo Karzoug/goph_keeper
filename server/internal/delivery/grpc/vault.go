@@ -63,11 +63,15 @@ func (s *server) SetVaultItem(ctx context.Context, req *pb.SetVaultItemRequest) 
 		ClientUpdatedAt: req.Item.ClientUpdatedAt.AsTime(),
 	})
 	if err != nil {
-		if errors.Is(err, service.ErrVaultItemVersionConflict) {
+		switch {
+		case errors.Is(err, service.ErrVaultItemVersionConflict):
 			return nil, pb.ErrVaultItemConflictVersion
+		case errors.Is(err, service.ErrVaultItemValueTooBig):
+			return nil, pb.ErrVaultItemValueTooBig
+		default:
+			s.logger.Error(op, sl.Error(err))
+			return nil, pb.ErrInternal
 		}
-		s.logger.Error(op, sl.Error(err))
-		return nil, pb.ErrInternal
 	}
 	return &pb.SetVaultItemResponse{
 		ServerUpdatedAt: timestamppb.New(t),

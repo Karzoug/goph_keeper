@@ -12,4 +12,5 @@ var (
 	ErrUserInvalidToken         = errors.New("user token not valid")
 	ErrUserNeedAuthentication   = errors.New("user need authentication")
 	ErrVaultItemVersionConflict = errors.New("vault item: conflict version")
+	ErrVaultItemValueTooBig     = errors.New("vault item: big value")
 )
