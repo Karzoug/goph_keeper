@@ -38,7 +38,7 @@ func (s *storage) ListVaultItems(ctx context.Context) ([]vault.Item, error) {
 
 	return res, nil
 }
-func (s *storage) ListVaultItemsIdName(ctx context.Context) ([]vault.IdName, error) {
+func (s *storage) ListVaultItemsIDName(ctx context.Context) ([]vault.IDName, error) {
 	const op = "sqlite: list vault items names"
 
 	rows, err := s.db.QueryContext(ctx, `SELECT id, name FROM vaults`)
@@ -48,10 +48,10 @@ func (s *storage) ListVaultItemsIdName(ctx context.Context) ([]vault.IdName, err
 	}
 	defer rows.Close()
 
-	res := make([]vault.IdName, 0)
+	res := make([]vault.IDName, 0)
 	for rows.Next() {
-		var item vault.IdName
-		err := rows.Scan(&item.Id, &item.Name)
+		var item vault.IDName
+		err := rows.Scan(&item.ID, &item.Name)
 		if err != nil {
 			return nil, e.Wrap(op, err)
 		}

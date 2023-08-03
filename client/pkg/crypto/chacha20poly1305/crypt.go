@@ -40,14 +40,16 @@ func Encrypt(r io.Reader, w io.Writer, encrKey []byte) error {
 			binary.LittleEndian.PutUint32(adCounterBytes, adCounter)
 			msg := buf[:n]
 			encryptedMsg := aead.Seal(nonce, nonce, msg, adCounterBytes)
-			w.Write(encryptedMsg)
+			if _, err := w.Write(encryptedMsg); err != nil {
+				return e.Wrap("error writing", err)
+			}
 			adCounter += 1
 		}
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return e.Wrap("error reading: ", err)
+			return e.Wrap("error reading", err)
 		}
 	}
 	return nil
@@ -77,7 +79,9 @@ func Decrypt(r io.Reader, w io.Writer, encrKey []byte) error {
 			if err != nil {
 				return errors.New("decrypt ciphertext error: wrong password or data")
 			}
-			w.Write(plaintext)
+			if _, err := w.Write(plaintext); err != nil {
+				return e.Wrap("error writing", err)
+			}
 		}
 		if err == io.EOF {
 			break

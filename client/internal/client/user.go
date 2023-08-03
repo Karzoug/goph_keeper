@@ -186,11 +186,10 @@ func isValidEmail(email string) bool {
 	if len(email) == 0 {
 		return false
 	}
-	e, err := mail.ParseAddress(email)
+	_, err := mail.ParseAddress(email)
 	if err != nil {
 		return false
 	}
-	email = e.Address
 
 	return true
 }

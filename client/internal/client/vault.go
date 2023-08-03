@@ -12,14 +12,14 @@ import (
 	pb "github.com/Karzoug/goph_keeper/common/grpc"
 )
 
-func (c *Client) ListVaultItemsNames(ctx context.Context) ([]vault.IdName, error) {
+func (c *Client) ListVaultItemsIDName(ctx context.Context) ([]vault.IDName, error) {
 	const op = "list vault items names"
 
 	if !c.HasLocalCredintials() {
 		return nil, ErrUserNeedAuthentication
 	}
 
-	names, err := c.storage.ListVaultItemsIdName(ctx)
+	names, err := c.storage.ListVaultItemsIDName(ctx)
 	if err != nil {
 		c.logger.Debug(op, err)
 		return nil, ErrAppInternal

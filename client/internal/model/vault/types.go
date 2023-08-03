@@ -19,7 +19,7 @@ type Text struct {
 	Text string
 }
 
-type IdName struct {
-	Id   string
+type IDName struct {
+	ID   string
 	Name string
 }
