@@ -18,3 +18,8 @@ type Text struct {
 	Meta map[string]string
 	Text string
 }
+
+type IdName struct {
+	Id   string
+	Name string
+}

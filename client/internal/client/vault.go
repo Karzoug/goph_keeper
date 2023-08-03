@@ -6,18 +6,20 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/rs/xid"
+
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
 	pb "github.com/Karzoug/goph_keeper/common/grpc"
 )
 
-func (c *Client) ListVaultItemsNames(ctx context.Context) ([]string, error) {
+func (c *Client) ListVaultItemsNames(ctx context.Context) ([]vault.IdName, error) {
 	const op = "list vault items names"
 
 	if !c.HasLocalCredintials() {
 		return nil, ErrUserNeedAuthentication
 	}
 
-	names, err := c.storage.ListVaultItemsNames(ctx)
+	names, err := c.storage.ListVaultItemsIdName(ctx)
 	if err != nil {
 		c.logger.Debug(op, err)
 		return nil, ErrAppInternal
@@ -31,6 +33,10 @@ func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, va
 
 	if !c.HasLocalCredintials() {
 		return ErrUserNeedAuthentication
+	}
+
+	if len(item.ID) == 0 {
+		item.ID = xid.New().String()
 	}
 
 	if err := item.EncryptAndSetValue(value, c.credentials.encrKey); err != nil {
@@ -52,8 +58,9 @@ func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, va
 		return ErrUserNeedAuthentication
 	}
 
-	_, err = c.grpcClient.SetVaultItem(ctx, &pb.SetVaultItemRequest{
+	resp, err := c.grpcClient.SetVaultItem(ctx, &pb.SetVaultItemRequest{
 		Item: &pb.VaultItem{
+			Id:              item.ID,
 			Name:            item.Name,
 			Itype:           pb.IType(item.Type),
 			Value:           item.Value,
@@ -77,17 +84,23 @@ func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, va
 		}
 	}
 
+	item.ServerUpdatedAt = resp.ServerUpdatedAt.AsTime()
+	if err := c.storage.SetVaultItem(ctx, item); err != nil {
+		c.logger.Debug(op, err)
+		return ErrAppInternal
+	}
+
 	return nil
 }
 
-func (c *Client) DecryptAndGetVaultItem(ctx context.Context, name string) (vault.Item, any, error) {
+func (c *Client) DecryptAndGetVaultItem(ctx context.Context, id string) (vault.Item, any, error) {
 	const op = "client: decrypt and get vault item"
 
 	if !c.HasLocalCredintials() {
 		return vault.Item{}, nil, ErrUserNeedAuthentication
 	}
 
-	item, err := c.storage.GetVaultItem(ctx, name)
+	item, err := c.storage.GetVaultItem(ctx, id)
 	if err != nil {
 		c.logger.Debug(op, err)
 		return vault.Item{}, nil, ErrAppInternal
