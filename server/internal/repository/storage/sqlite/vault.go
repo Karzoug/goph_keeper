@@ -15,8 +15,8 @@ func (s *storage) SetVaultItem(ctx context.Context, email string, item vault.Ite
 
 	res, err := s.db.ExecContext(ctx,
 		`INSERT INTO vaults(id,email,name,type,value,updated_at) VALUES(?, ?, ?, ?, ?, ?)
-		ON CONFLICT(id) 
-		DO UPDATE SET email = excluded.email, name = excluded.name, type = excluded.type, value=excluded.value, updated_at=excluded.updated_at
+		ON CONFLICT(id,email) 
+		DO UPDATE SET name = excluded.name, type = excluded.type, value=excluded.value, updated_at=excluded.updated_at
 		WHERE updated_at=?;`,
 		item.ID, email, item.Name, item.Type, item.Value, item.ClientUpdatedAt, item.ServerUpdatedAt)
 	if err != nil {
@@ -38,7 +38,7 @@ func (s *storage) LastUpdateVault(ctx context.Context, email string) (time.Time,
 
 	var t time.Time
 	err := s.db.QueryRowContext(ctx,
-		`SELECT MAX(updated_at) FROM vaults WHERE email = ?;`, email).
+		`SELECT updated_at FROM vaults WHERE email = ? ORDER BY updated_at DESC LIMIT 1;`, email).
 		Scan(&t)
 
 	if err != nil {

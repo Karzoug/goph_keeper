@@ -33,11 +33,11 @@ type clientStorage interface {
 	ClearVault(ctx context.Context) error
 
 	ListVaultItems(context.Context) ([]vault.Item, error)
-	ListVaultItemsNames(context.Context) ([]string, error)
+	ListVaultItemsIdName(context.Context) ([]vault.IdName, error)
 	ListModifiedVaultItems(context.Context) ([]vault.Item, error)
-	GetVaultItem(ctx context.Context, name string) (vault.Item, error)
+	GetVaultItem(ctx context.Context, id string) (vault.Item, error)
 	SetVaultItem(ctx context.Context, item vault.Item) error
-	MoveVaultItemToConflict(ctx context.Context, name string) error
+	MoveVaultItemToConflict(ctx context.Context, id string) error
 	GetLastServerUpdatedAt(ctx context.Context) (time.Time, error)
 
 	Close() error

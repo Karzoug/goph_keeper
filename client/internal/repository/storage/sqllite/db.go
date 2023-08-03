@@ -46,7 +46,7 @@ func New() (*storage, error) {
 	if err != nil {
 		return nil, e.Wrap(op, err)
 	}
-	m.Up()
+	_ = m.Up()
 
 	return &storage{
 		db: db,

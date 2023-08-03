@@ -12,6 +12,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.7.1
 	github.com/matthewhartstonge/argon2 v0.3.3
+	github.com/rs/xid v1.5.0
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/exp v0.0.0-20230728194245-b0cb94b80691
 	google.golang.org/grpc v1.57.0
@@ -47,7 +48,7 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/crypto v0.10.0
 	golang.org/x/mod v0.11.0 // indirect
-	golang.org/x/net v0.10.0
+	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/sys v0.9.0 // indirect
 	golang.org/x/term v0.9.0 // indirect

@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS vaults (
-	id TEXT PRIMARY KEY,
+	id TEXT NOT NULL,
 	email TEXT NOT NULL REFERENCES users (email),
 	name TEXT NOT NULL,
 	type INTEGER,
 	value BLOB,
-	updated_at DATETIME);
-CREATE INDEX vaults_email_index ON vaults (email);
+	updated_at DATETIME,
+	PRIMARY KEY(id,email));

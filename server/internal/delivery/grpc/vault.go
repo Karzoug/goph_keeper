@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	pb "github.com/Karzoug/goph_keeper/common/grpc"
 	"github.com/Karzoug/goph_keeper/common/model/vault"
 	"github.com/Karzoug/goph_keeper/pkg/logger/slog/sl"
@@ -32,9 +34,12 @@ func (s *server) ListVaultItems(ctx context.Context, req *pb.ListVaultItemsReque
 	pbItems := make([]*pb.VaultItem, len(items))
 	for i := 0; i < len(items); i++ {
 		pbItems[i] = &pb.VaultItem{
-			Name:  items[i].Name,
-			Itype: pb.IType(items[i].Type),
-			Value: items[i].Value,
+			Id:              items[i].ID,
+			Name:            items[i].Name,
+			Itype:           pb.IType(items[i].Type),
+			Value:           items[i].Value,
+			ServerUpdatedAt: timestamppb.New(items[i].ServerUpdatedAt),
+			ClientUpdatedAt: timestamppb.New(items[i].ClientUpdatedAt),
 		}
 	}
 	return &pb.ListVaultItemsResponse{
@@ -49,10 +54,13 @@ func (s *server) SetVaultItem(ctx context.Context, req *pb.SetVaultItemRequest) 
 	if err != nil {
 		return nil, pb.ErrEmptyAuthData
 	}
-	id, err := s.service.SetVaultItem(ctx, email, vault.Item{
-		Name:  req.Item.Name,
-		Type:  vault.ItemType(req.Item.Itype),
-		Value: req.Item.Value,
+	t, err := s.service.SetVaultItem(ctx, email, vault.Item{
+		ID:              req.Item.Id,
+		Name:            req.Item.Name,
+		Type:            vault.ItemType(req.Item.Itype),
+		Value:           req.Item.Value,
+		ServerUpdatedAt: req.Item.ServerUpdatedAt.AsTime(),
+		ClientUpdatedAt: req.Item.ClientUpdatedAt.AsTime(),
 	})
 	if err != nil {
 		if errors.Is(err, service.ErrVaultItemVersionConflict) {
@@ -61,5 +69,7 @@ func (s *server) SetVaultItem(ctx context.Context, req *pb.SetVaultItemRequest) 
 		s.logger.Error(op, sl.Error(err))
 		return nil, pb.ErrInternal
 	}
-	return &pb.SetVaultItemResponse{Id: id}, nil
+	return &pb.SetVaultItemResponse{
+		ServerUpdatedAt: timestamppb.New(t),
+	}, nil
 }

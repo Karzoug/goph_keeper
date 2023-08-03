@@ -40,7 +40,11 @@ func (c *Client) updateVaultItemsFromServer(ctx context.Context) error {
 	// looking for the time of the last entry received from the server
 	var ts *timestamppb.Timestamp
 	since, err := c.storage.GetLastServerUpdatedAt(ctx)
-	if err == nil {
+	if err != nil {
+		if !errors.Is(err, storage.ErrRecordNotFound) {
+			c.logger.Debug(op, err)
+		}
+	} else {
 		ts = timestamppb.New(since)
 	}
 
@@ -75,7 +79,7 @@ func (c *Client) updateVaultItemsFromServer(ctx context.Context) error {
 			ServerUpdatedAt: resp.Items[i].ServerUpdatedAt.AsTime(),
 			ClientUpdatedAt: resp.Items[i].ServerUpdatedAt.AsTime(),
 		}
-		dbItem, err := c.storage.GetVaultItem(ctx, item.Name)
+		dbItem, err := c.storage.GetVaultItem(ctx, item.ID)
 		if err != nil {
 			if err != storage.ErrRecordNotFound {
 				c.logger.Debug(op, err)
@@ -85,9 +89,9 @@ func (c *Client) updateVaultItemsFromServer(ctx context.Context) error {
 		// case: conflict version on server and client,
 		// move client item version to conflict db table and
 		// save server item version to main vault table
-		if !dbItem.ServerUpdatedAt.Equal(dbItem.ClientUpdatedAt) && // dbItem not pointer so it's ok
+		if !dbItem.ServerUpdatedAt.Equal(dbItem.ClientUpdatedAt) &&
 			item.ServerUpdatedAt.After(dbItem.ServerUpdatedAt) {
-			err := c.storage.MoveVaultItemToConflict(ctx, item.Name)
+			err := c.storage.MoveVaultItemToConflict(ctx, item.ID)
 			if err != nil {
 				c.logger.Debug(op, err)
 				return ErrAppInternal
@@ -149,8 +153,7 @@ func (c *Client) sendModifiedVaultItemsToServer(ctx context.Context) error {
 
 		// if synchronization for this item was successful,
 		// update item server time
-		modifiedItems[i].ServerUpdatedAt = modifiedItems[i].ClientUpdatedAt
-		modifiedItems[i].ID = resp.Id
+		modifiedItems[i].ServerUpdatedAt = resp.ServerUpdatedAt.AsTime()
 		if err := c.storage.SetVaultItem(ctx, modifiedItems[i]); err != nil {
 			c.logger.Debug(op, err)
 			return ErrServerInternal

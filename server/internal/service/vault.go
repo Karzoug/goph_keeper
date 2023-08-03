@@ -5,8 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/rs/xid"
-
 	"github.com/Karzoug/goph_keeper/common/model/vault"
 	"github.com/Karzoug/goph_keeper/pkg/e"
 	"github.com/Karzoug/goph_keeper/pkg/logger/slog/sl"
@@ -15,21 +13,17 @@ import (
 
 const lastUpdateCacheTTL = 24 * time.Hour
 
-func (s *Service) SetVaultItem(ctx context.Context, email string, item vault.Item) (string, error) {
+func (s *Service) SetVaultItem(ctx context.Context, email string, item vault.Item) (time.Time, error) {
 	const op = "service: set vault item"
-
-	if len(item.ID) == 0 {
-		item.ID = xid.New().String()
-	}
 
 	err := s.storage.SetVaultItem(ctx, email, item)
 	if err != nil {
 		if errors.Is(err, storage.ErrNoRecordsAffected) {
-			return "", e.Wrap(op, ErrVaultItemVersionConflict)
+			return time.Time{}, e.Wrap(op, ErrVaultItemVersionConflict)
 		}
-		return "", e.Wrap(op, err)
+		return time.Time{}, e.Wrap(op, err)
 	}
-	return item.ID, nil
+	return item.ClientUpdatedAt, nil
 }
 
 func (s *Service) ListVaultItems(ctx context.Context, email string, since *time.Time) ([]vault.Item, error) {
