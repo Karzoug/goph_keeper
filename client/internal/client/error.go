@@ -17,5 +17,4 @@ var (
 	ErrServerInternal               = errors.New("server internal error")
 	ErrUserNeedAuthentication       = errors.New("user need authentication")
 	ErrConflictVersion              = errors.New("conflict data version on server and client")
-	errUnresolvableHost             = errors.New("unresolvable host")
 )

@@ -3,12 +3,8 @@ package client
 import (
 	"context"
 	"errors"
-	"net"
 	"net/mail"
-	"strings"
 	"unicode/utf8"
-
-	"golang.org/x/net/idna"
 
 	"github.com/Karzoug/goph_keeper/client/internal/model/auth"
 	"github.com/Karzoug/goph_keeper/client/pkg/crypto"
@@ -195,44 +191,6 @@ func isValidEmail(email string) bool {
 		return false
 	}
 	email = e.Address
-	if err := validateMX(email); err != nil {
-		return false
-	}
 
 	return true
-}
-
-// validateMX validate if MX record exists for a domain.
-func validateMX(email string) error {
-	_, host := split(email)
-	if len(host) == 0 {
-		return errUnresolvableHost
-	}
-	host = hostToASCII(host)
-	if _, err := net.LookupMX(host); err != nil {
-		return errUnresolvableHost
-	}
-
-	return nil
-}
-
-func split(email string) (account, host string) {
-	i := strings.LastIndexByte(email, '@')
-	// If no @ present, not a valid email.
-	if i < 0 {
-		return
-	}
-	account = email[:i]
-	host = email[i+1:]
-	return
-}
-
-// domainToASCII converts any internationalized domain names to ASCII
-// reference: https://en.wikipedia.org/wiki/Punycode
-func hostToASCII(host string) string {
-	asciiDomain, err := idna.ToASCII(host)
-	if err != nil {
-		return host
-	}
-	return asciiDomain
 }
