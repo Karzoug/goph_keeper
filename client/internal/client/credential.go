@@ -20,7 +20,7 @@ type credentials struct {
 
 // HasLocalCredintials indicates whether credentials for the application to work locally.
 func (c *Client) HasLocalCredintials() bool {
-	return len(c.credentials.email) > 0 && c.credentials.encrKey != nil
+	return len(c.credentials.email) > 0 && c.credentials.encrKey.Hash != nil
 }
 
 // HasToken indicates whether token for the application to work online.
@@ -38,12 +38,12 @@ func buildPasswordHashes(ctx context.Context, email string, password []byte) (au
 
 	hash, err := auth.NewHash([]byte(email), password)
 	if err != nil {
-		return nil, nil, e.Wrap(op, err)
+		return nil, vault.EncryptionKey{}, e.Wrap(op, err)
 	}
 
 	encrKey, err := vault.NewEncryptionKey([]byte(email), password)
 	if err != nil {
-		return nil, nil, e.Wrap(op, err)
+		return nil, vault.EncryptionKey{}, e.Wrap(op, err)
 	}
 
 	return hash, encrKey, nil
@@ -82,7 +82,7 @@ func (c *Client) setCredentialsForOwnerOnly(ctx context.Context, email string, h
 		authHash: hash,
 	}
 
-	if err := c.credentialsStorage.SetCredentials(email, "", encrKey); err != nil {
+	if err := c.credentialsStorage.SetCredentials(email, "", string(encrKey.Encode())); err != nil {
 		return e.Wrap(op, err)
 	}
 
@@ -121,7 +121,7 @@ func (c *Client) setCredentialsForced(ctx context.Context, email string, hash au
 		authHash: hash,
 	}
 
-	if err := c.credentialsStorage.SetCredentials(email, "", encrKey); err != nil {
+	if err := c.credentialsStorage.SetCredentials(email, "", string(encrKey.Encode())); err != nil {
 		return e.Wrap(op, err)
 	}
 
@@ -139,7 +139,7 @@ func (c *Client) setToken(token string) error {
 	}
 
 	return e.Wrap(op,
-		c.credentialsStorage.SetCredentials(c.credentials.email, token, c.credentials.encrKey))
+		c.credentialsStorage.SetCredentials(c.credentials.email, token, string(c.credentials.encrKey.Encode())))
 }
 
 func (c *Client) clearCredentials(ctx context.Context) error {
@@ -151,13 +151,19 @@ func (c *Client) clearCredentials(ctx context.Context) error {
 		c.credentialsStorage.DeleteCredentials())
 }
 
-func (c *Client) restoreCredentials() bool {
+func (c *Client) restoreCredentials() error {
 	const op = "restore credentials"
 
-	email, token, encrKey, err := c.credentialsStorage.GetCredentials()
+	email, token, encrKeyString, err := c.credentialsStorage.GetCredentials()
 	if err != nil {
-		c.logger.Debug(op, err)
-		return false
+		if errors.Is(err, storage.ErrRecordNotFound) {
+			return nil
+		}
+		return e.Wrap(op, err)
+	}
+	encrKey, err := vault.EncryptionKeyFromString(encrKeyString)
+	if err != nil {
+		return e.Wrap(op, err)
 	}
 
 	c.credentials = credentials{
@@ -165,6 +171,5 @@ func (c *Client) restoreCredentials() bool {
 		token:   token,
 		encrKey: encrKey,
 	}
-
-	return true
+	return nil
 }

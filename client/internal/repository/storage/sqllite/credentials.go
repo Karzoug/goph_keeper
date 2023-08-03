@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 
+	serr "github.com/Karzoug/goph_keeper/client/internal/repository/storage"
 	"github.com/Karzoug/goph_keeper/pkg/e"
 )
 
@@ -13,7 +14,7 @@ const (
 	encrKeyDBKey = "CREDS_ENCRKEY"
 )
 
-func (s *storage) SetCredentials(email, token string, encrKey []byte) error {
+func (s *storage) SetCredentials(email, token, encrKey string) error {
 	const op = "sqlite: set credentials"
 
 	tx, err := s.db.Begin()
@@ -45,31 +46,37 @@ func (s *storage) SetCredentials(email, token string, encrKey []byte) error {
 	return e.Wrap(op, tx.Commit())
 }
 
-func (s *storage) GetCredentials() (email, token string, encrKey []byte, err error) {
+func (s *storage) GetCredentials() (email, token, encrKey string, err error) {
 	const op = "sqlite: get credentials"
 
 	tx, err := s.db.Begin()
 	if err != nil {
-		return "", "", nil, e.Wrap(op, err)
+		return "", "", "", e.Wrap(op, err)
 	}
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`SELECT value FROM app WHERE key = ?;`)
 	if err != nil {
-		return "", "", nil, e.Wrap(op, err)
+		return "", "", "", e.Wrap(op, err)
 	}
 	defer stmt.Close()
 
 	if err := stmt.QueryRow(emailDBKey).Scan(&email); err != nil {
-		return "", "", nil, e.Wrap(op, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", "", "", e.Wrap(op, serr.ErrRecordNotFound)
+		}
+		return "", "", "", e.Wrap(op, err)
 	}
 	if err := stmt.QueryRow(tokenDBKey).Scan(&token); err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
-			return "", "", nil, e.Wrap(op, err)
+			return "", "", "", e.Wrap(op, err)
 		}
 	}
 	if err := stmt.QueryRow(encrKeyDBKey).Scan(&encrKey); err != nil {
-		return "", "", nil, e.Wrap(op, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", "", "", e.Wrap(op, serr.ErrRecordNotFound)
+		}
+		return "", "", "", e.Wrap(op, err)
 	}
 
 	err = e.Wrap(op, tx.Commit())

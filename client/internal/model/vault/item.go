@@ -26,7 +26,7 @@ func (item *Item) EncryptAndSetValue(data any, encrKey EncryptionKey) error {
 	bw := bytes.NewBuffer(nil)
 	bw.Grow(chacha20poly1305.GetCapacityForEncryptedValue(br.Len()))
 
-	if err := chacha20poly1305.Encrypt(br, bw, encrKey); err != nil {
+	if err := chacha20poly1305.Encrypt(br, bw, encrKey.Hash); err != nil {
 		return e.Wrap(op, err)
 	}
 
@@ -41,22 +41,32 @@ func (item Item) DecryptAnGetValue(encrKey EncryptionKey) (any, error) {
 	br := bytes.NewReader(item.Value)
 	bw := bytes.NewBuffer(nil)
 
-	if err := chacha20poly1305.Decrypt(br, bw, encrKey); err != nil {
+	if err := chacha20poly1305.Decrypt(br, bw, encrKey.Hash); err != nil {
 		return nil, e.Wrap(op, err)
-	}
-
-	var value any
-	switch item.Type {
-	case cvault.Password:
-		value = Password{}
-	default:
-		return nil, e.Wrap(op, ErrUnknownVaultType)
 	}
 
 	dec := gob.NewDecoder(bw)
-	if err := dec.Decode(value); err != nil {
-		return nil, e.Wrap(op, err)
-	}
 
-	return value, nil
+	switch item.Type {
+	case cvault.Password:
+		psw := Password{}
+		if err := dec.Decode(&psw); err != nil {
+			return nil, e.Wrap(op, err)
+		}
+		return psw, nil
+	case cvault.Card:
+		crd := Card{}
+		if err := dec.Decode(&crd); err != nil {
+			return nil, e.Wrap(op, err)
+		}
+		return crd, nil
+	case cvault.Text:
+		txt := Text{}
+		if err := dec.Decode(&txt); err != nil {
+			return nil, e.Wrap(op, err)
+		}
+		return txt, nil
+	default:
+		return nil, e.Wrap(op, ErrUnknownVaultType)
+	}
 }

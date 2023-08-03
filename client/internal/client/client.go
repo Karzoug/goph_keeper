@@ -17,10 +17,10 @@ import (
 
 type clientCredentialsStorage interface {
 	// SetCredentials adds or updates email, token and encryption key.
-	SetCredentials(email, token string, encrKey []byte) error
+	SetCredentials(email, token, encrKey string) error
 	//GetCredentials returns email and encryption key, or an error if they are not found.
 	// It can also return a token if it exists.
-	GetCredentials() (email, token string, encrKey []byte, err error)
+	GetCredentials() (email, token, encrKey string, err error)
 	// DeleteCredentials deletes all credentials: email, token and encryption key.
 	DeleteCredentials() error
 	// Close closes storage if applicable.
@@ -69,7 +69,9 @@ func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	c.credentialsStorage = ss // TODO: add other credentials storages
 	c.storage = ss
 
-	_ = c.restoreCredentials()
+	if err := c.restoreCredentials(); err != nil {
+		c.logger.Debug(op, err)
+	}
 
 	// TODO: add TLS
 	c.conn, err = grpc.Dial(c.cfg.Address, grpc.WithTransportCredentials(insecure.NewCredentials()))
