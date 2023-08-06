@@ -15,6 +15,7 @@ var (
 	ErrUserNotExists                = errors.New("user not exists")
 	ErrAppInternal                  = errors.New("app internal error")
 	ErrServerInternal               = errors.New("server internal error")
-	ErrUserNeedAuthentication       = errors.New("user need authentication")
+	ErrServerUnavailable            = errors.New("no connection to server")
+	ErrUserNeedAuthentication       = errors.New("need authentication: please login")
 	ErrConflictVersion              = errors.New("conflict data version on server and client")
 )

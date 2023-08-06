@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"time"
 
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
 	serr "github.com/Karzoug/goph_keeper/client/internal/repository/storage"
@@ -140,7 +139,7 @@ func (s *storage) MoveVaultItemToConflict(ctx context.Context, id string) error 
 	if err != nil {
 		return e.Wrap(op, err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	res, err := s.db.ExecContext(ctx,
 		`INSERT INTO conflict_vaults (id,name,type,value,client_updated_at,server_updated_at)
@@ -162,18 +161,15 @@ func (s *storage) MoveVaultItemToConflict(ctx context.Context, id string) error 
 
 	return nil
 }
-func (s *storage) GetLastServerUpdatedAt(ctx context.Context) (time.Time, error) {
+func (s *storage) GetLastServerUpdatedAt(ctx context.Context) (int64, error) {
 	const op = "sqlite: get last server updated at"
 
-	var item sql.NullTime
-	err := s.db.QueryRowContext(ctx, `SELECT server_updated_at FROM vaults ORDER BY server_updated_at DESC LIMIT 1`).Scan(&item)
+	var t int64
+	err := s.db.QueryRowContext(ctx, `SELECT server_updated_at FROM vaults ORDER BY server_updated_at DESC LIMIT 1`).Scan(&t)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return time.Time{}, serr.ErrRecordNotFound
+			return 0, serr.ErrRecordNotFound
 		}
 	}
-	if !item.Valid {
-		return time.Time{}, serr.ErrRecordNotFound
-	}
-	return item.Time, e.Wrap(op, err)
+	return t, e.Wrap(op, err)
 }

@@ -20,7 +20,7 @@ type Storage interface {
 	GetUser(ctx context.Context, email string) (user.User, error)
 	UpdateUser(context.Context, user.User) error
 	SetVaultItem(ctx context.Context, email string, item vault.Item) error
-	ListVaultItems(ctx context.Context, email string, since *time.Time) ([]vault.Item, error)
+	ListVaultItems(ctx context.Context, email string, since int64) ([]vault.Item, error)
 	Close() error
 }
 

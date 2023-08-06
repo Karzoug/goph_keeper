@@ -38,7 +38,7 @@ type clientStorage interface {
 	GetVaultItem(ctx context.Context, id string) (vault.Item, error)
 	SetVaultItem(ctx context.Context, item vault.Item) error
 	MoveVaultItemToConflict(ctx context.Context, id string) error
-	GetLastServerUpdatedAt(ctx context.Context) (time.Time, error)
+	GetLastServerUpdatedAt(ctx context.Context) (int64, error)
 
 	Close() error
 }

@@ -17,7 +17,7 @@ func (s *storage) SetVaultItem(ctx context.Context, email string, item vault.Ite
 		`INSERT INTO vaults(id,email,name,type,value,updated_at) VALUES(?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id,email) 
 		DO UPDATE SET name = excluded.name, type = excluded.type, value=excluded.value, updated_at=excluded.updated_at
-		WHERE updated_at=?;`,
+		WHERE excluded.updated_at=?;`,
 		item.ID, email, item.Name, item.Type, item.Value, item.ClientUpdatedAt, item.ServerUpdatedAt)
 	if err != nil {
 		return e.Wrap(op, err)
@@ -70,14 +70,14 @@ func (s *storage) DeleteVaultItem(ctx context.Context, email string, id string) 
 
 	return nil
 }
-func (s *storage) ListVaultItems(ctx context.Context, email string, since *time.Time) ([]vault.Item, error) {
+func (s *storage) ListVaultItems(ctx context.Context, email string, since int64) ([]vault.Item, error) {
 	const op = "sqlite: list vault items"
 
 	var (
 		rows *sql.Rows
 		err  error
 	)
-	if since != nil {
+	if since != 0 {
 		rows, err = s.db.QueryContext(ctx,
 			`SELECT id, name, type, value, updated_at FROM vaults WHERE email = ? AND updated_at > ?;`, email, since)
 	} else {

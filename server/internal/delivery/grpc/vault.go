@@ -3,9 +3,6 @@ package grpc
 import (
 	"context"
 	"errors"
-	"time"
-
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	pb "github.com/Karzoug/goph_keeper/common/grpc"
 	"github.com/Karzoug/goph_keeper/common/model/vault"
@@ -21,12 +18,7 @@ func (s *server) ListVaultItems(ctx context.Context, req *pb.ListVaultItemsReque
 	if err != nil {
 		return nil, pb.ErrEmptyAuthData
 	}
-	var since *time.Time
-	if req.Since.IsValid() {
-		t := req.Since.AsTime()
-		since = &t
-	}
-	items, err := s.service.ListVaultItems(ctx, email, since)
+	items, err := s.service.ListVaultItems(ctx, email, req.Since)
 	if err != nil {
 		s.logger.Error(op, sl.Error(err))
 		return nil, pb.ErrInternal
@@ -38,8 +30,8 @@ func (s *server) ListVaultItems(ctx context.Context, req *pb.ListVaultItemsReque
 			Name:            items[i].Name,
 			Itype:           pb.IType(items[i].Type),
 			Value:           items[i].Value,
-			ServerUpdatedAt: timestamppb.New(items[i].ServerUpdatedAt),
-			ClientUpdatedAt: timestamppb.New(items[i].ClientUpdatedAt),
+			ServerUpdatedAt: items[i].ServerUpdatedAt,
+			ClientUpdatedAt: items[i].ClientUpdatedAt,
 		}
 	}
 	return &pb.ListVaultItemsResponse{
@@ -59,8 +51,8 @@ func (s *server) SetVaultItem(ctx context.Context, req *pb.SetVaultItemRequest) 
 		Name:            req.Item.Name,
 		Type:            vault.ItemType(req.Item.Itype),
 		Value:           req.Item.Value,
-		ServerUpdatedAt: req.Item.ServerUpdatedAt.AsTime(),
-		ClientUpdatedAt: req.Item.ClientUpdatedAt.AsTime(),
+		ServerUpdatedAt: req.Item.ServerUpdatedAt,
+		ClientUpdatedAt: req.Item.ClientUpdatedAt,
 	})
 	if err != nil {
 		switch {
@@ -74,6 +66,6 @@ func (s *server) SetVaultItem(ctx context.Context, req *pb.SetVaultItemRequest) 
 		}
 	}
 	return &pb.SetVaultItemResponse{
-		ServerUpdatedAt: timestamppb.New(t),
+		ServerUpdatedAt: t,
 	}, nil
 }

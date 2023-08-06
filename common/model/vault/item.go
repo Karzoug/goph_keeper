@@ -1,7 +1,5 @@
 package vault
 
-import "time"
-
 const (
 	Unknown ItemType = iota
 	Password
@@ -18,6 +16,6 @@ type Item struct {
 	Name            string
 	Type            ItemType
 	Value           []byte
-	ServerUpdatedAt time.Time
-	ClientUpdatedAt time.Time
+	ServerUpdatedAt int64
+	ClientUpdatedAt int64
 }

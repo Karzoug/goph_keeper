@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/rs/xid"
 
@@ -49,13 +50,9 @@ func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, va
 		return ErrAppInternal
 	}
 
-	if !c.HasToken() {
-		return nil
-	}
-
 	ctx, err := c.newContextWithAuthData(ctx)
 	if err != nil {
-		return ErrUserNeedAuthentication
+		return nil
 	}
 
 	resp, err := c.grpcClient.SetVaultItem(ctx, &pb.SetVaultItemRequest{
@@ -64,8 +61,8 @@ func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, va
 			Name:            item.Name,
 			Itype:           pb.IType(item.Type),
 			Value:           item.Value,
-			ClientUpdatedAt: timestamppb.New(item.ClientUpdatedAt),
-			ServerUpdatedAt: timestamppb.New(item.ServerUpdatedAt),
+			ClientUpdatedAt: item.ClientUpdatedAt,
+			ServerUpdatedAt: item.ServerUpdatedAt,
 		},
 	})
 	if err != nil {
@@ -74,17 +71,21 @@ func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, va
 			errors.Is(err, pb.ErrEmptyAuthData),
 			errors.Is(err, pb.ErrUserInvalidToken),
 			errors.Is(err, pb.ErrUserNeedAuthentication):
-			return ErrUserNeedAuthentication
+			_ = c.clearToken()
+			return nil
 		case errors.Is(err, pb.ErrVaultItemConflictVersion):
 			// it's ok, next update method iteration hadle this conflict
 			return ErrConflictVersion
 		default:
 			c.logger.Debug(op, err)
+			if status.Code(err) == codes.Unavailable {
+				return ErrServerUnavailable
+			}
 			return ErrServerInternal
 		}
 	}
 
-	item.ServerUpdatedAt = resp.ServerUpdatedAt.AsTime()
+	item.ServerUpdatedAt = resp.ServerUpdatedAt
 	if err := c.storage.SetVaultItem(ctx, item); err != nil {
 		c.logger.Debug(op, err)
 		return ErrAppInternal
