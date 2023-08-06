@@ -17,7 +17,7 @@ func (s *storage) SetVaultItem(ctx context.Context, email string, item vault.Ite
 		`INSERT INTO vaults(id,email,name,type,value,updated_at) VALUES(?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id,email) 
 		DO UPDATE SET name = excluded.name, type = excluded.type, value=excluded.value, updated_at=excluded.updated_at
-		WHERE excluded.updated_at=?;`,
+		WHERE vaults.updated_at=?;`,
 		item.ID, email, item.Name, item.Type, item.Value, item.ClientUpdatedAt, item.ServerUpdatedAt)
 	if err != nil {
 		return e.Wrap(op, err)
