@@ -177,7 +177,6 @@ func (c *Client) sendVaultItem(ctx context.Context, item vault.Item) (int64, err
 			Itype:           pb.IType(item.Type),
 			Value:           item.Value,
 			ServerUpdatedAt: item.ServerUpdatedAt,
-			ClientUpdatedAt: item.ClientUpdatedAt,
 		},
 	})
 	if err != nil {

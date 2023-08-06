@@ -61,7 +61,6 @@ func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, va
 			Name:            item.Name,
 			Itype:           pb.IType(item.Type),
 			Value:           item.Value,
-			ClientUpdatedAt: item.ClientUpdatedAt,
 			ServerUpdatedAt: item.ServerUpdatedAt,
 		},
 	})

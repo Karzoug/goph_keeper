@@ -31,7 +31,6 @@ func (s *server) ListVaultItems(ctx context.Context, req *pb.ListVaultItemsReque
 			Itype:           pb.IType(items[i].Type),
 			Value:           items[i].Value,
 			ServerUpdatedAt: items[i].ServerUpdatedAt,
-			ClientUpdatedAt: items[i].ClientUpdatedAt,
 		}
 	}
 	return &pb.ListVaultItemsResponse{
@@ -52,7 +51,6 @@ func (s *server) SetVaultItem(ctx context.Context, req *pb.SetVaultItemRequest) 
 		Type:            vault.ItemType(req.Item.Itype),
 		Value:           req.Item.Value,
 		ServerUpdatedAt: req.Item.ServerUpdatedAt,
-		ClientUpdatedAt: req.Item.ClientUpdatedAt,
 	})
 	if err != nil {
 		switch {
