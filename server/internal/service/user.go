@@ -113,6 +113,8 @@ func (s *Service) LoginWithEmailCode(ctx context.Context, email string, hash []b
 		return "", e.Wrap(op, err)
 	}
 
+	_ = s.caches.mail.Delete(ctx, email)
+
 	tokenString, err := s.setUserToAuthCache(ctx, u)
 	if err != nil {
 		return "", e.Wrap(op, err)
