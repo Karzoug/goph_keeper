@@ -2,12 +2,15 @@ package client
 
 import (
 	"context"
-	"time"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 
 	"golang.org/x/exp/slog"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	gcreds "google.golang.org/grpc/credentials"
 
+	"github.com/Karzoug/goph_keeper/client/build"
 	"github.com/Karzoug/goph_keeper/client/internal/config"
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
 	sqlite "github.com/Karzoug/goph_keeper/client/internal/repository/storage/sqllite"
@@ -73,8 +76,12 @@ func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 		c.logger.Debug(op, err)
 	}
 
-	// TODO: add TLS
-	c.conn, err = grpc.Dial(c.cfg.Address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	cs, err := loadTLSCredentials(cfg.Host)
+	if err != nil {
+		return nil, e.Wrap(op, err)
+	}
+	addr := cfg.Host + ":" + cfg.Port
+	c.conn, err = grpc.Dial(addr, grpc.WithTransportCredentials(cs))
 	if err != nil {
 		return nil, e.Wrap(op, err)
 	}
@@ -92,4 +99,17 @@ func (c *Client) Close() error {
 	const op = "close client"
 
 	return e.Wrap(op, c.storage.Close())
+}
+
+func loadTLSCredentials(host string) (gcreds.TransportCredentials, error) {
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(build.Certificate) {
+		return nil, errors.New("failed to add server CA's certificate")
+	}
+	config := &tls.Config{
+		ServerName: host,
+		RootCAs:    certPool,
+		MinVersion: tls.VersionTLS13,
+	}
+	return gcreds.NewTLS(config), nil
 }
