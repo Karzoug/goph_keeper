@@ -41,8 +41,6 @@ func New(ctx context.Context, cfg sconfig.Config) (*storage, error) {
 }
 
 func (s *storage) Close() error {
-	const op = "postgres: close"
-
 	s.db.Close()
 
 	return nil
