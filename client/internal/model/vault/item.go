@@ -66,6 +66,12 @@ func (item Item) DecryptAnGetValue(encrKey EncryptionKey) (any, error) {
 			return nil, e.Wrap(op, err)
 		}
 		return txt, nil
+	case cvault.Binary:
+		b := Binary{}
+		if err := dec.Decode(&b); err != nil {
+			return nil, e.Wrap(op, err)
+		}
+		return b, nil
 	default:
 		return nil, e.Wrap(op, ErrUnknownVaultType)
 	}

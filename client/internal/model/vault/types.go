@@ -20,13 +20,13 @@ type Text struct {
 }
 
 type Binary struct {
-	Meta     map[string]string
-	Filename string
+	Meta  map[string]string
+	Value []byte
 }
 
 type BinaryLarge struct {
-	Meta  map[string]string
-	Value []byte
+	Meta     map[string]string
+	Filename string
 }
 
 type IDName struct {
