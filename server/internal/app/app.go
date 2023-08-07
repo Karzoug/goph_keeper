@@ -22,7 +22,7 @@ import (
 func Run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	const op = "app run"
 
-	serviceStorage, err := buildServiceStorage(cfg.Service.Storage)
+	serviceStorage, err := buildServiceStorage(ctx, cfg.Service.Storage)
 	if err != nil {
 		return e.Wrap(op, err)
 	}
@@ -77,10 +77,10 @@ func Run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	return nil
 }
 
-func buildServiceStorage(cfg storage.Config) (service.Storage, error) {
+func buildServiceStorage(ctx context.Context, cfg storage.Config) (service.Storage, error) {
 	switch {
-	case strings.HasPrefix(cfg.URI, "postgresql"):
-		panic("not implemented")
+	case strings.HasPrefix(cfg.URI, postgres.URIPreffix):
+		return postgres.New(ctx, cfg)
 	case strings.HasPrefix(cfg.URI, sqlite.URIPreffix):
 		return sqlite.New(cfg)
 	case strings.HasPrefix(cfg.URI, "grpc://"):
