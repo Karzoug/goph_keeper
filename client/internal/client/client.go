@@ -4,13 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
+	"io"
+	"os"
 
 	"golang.org/x/exp/slog"
 	"google.golang.org/grpc"
 	gcreds "google.golang.org/grpc/credentials"
 
-	"github.com/Karzoug/goph_keeper/client/build"
 	"github.com/Karzoug/goph_keeper/client/internal/config"
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
 	sqlite "github.com/Karzoug/goph_keeper/client/internal/repository/storage/sqllite"
@@ -76,7 +76,7 @@ func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 		c.logger.Debug(op, err)
 	}
 
-	cs, err := loadTLSCredentials(cfg.Host)
+	cs, err := loadTLSCredentials(cfg.Host, cfg.CertFilename)
 	if err != nil {
 		return nil, e.Wrap(op, err)
 	}
@@ -101,15 +101,34 @@ func (c *Client) Close() error {
 	return e.Wrap(op, c.storage.Close())
 }
 
-func loadTLSCredentials(host string) (gcreds.TransportCredentials, error) {
-	certPool := x509.NewCertPool()
-	if !certPool.AppendCertsFromPEM(build.Certificate) {
-		return nil, errors.New("failed to add server CA's certificate")
-	}
+func loadTLSCredentials(host, certFilename string) (gcreds.TransportCredentials, error) {
+	const op = "load TLS credentials"
+
 	config := &tls.Config{
 		ServerName: host,
-		RootCAs:    certPool,
 		MinVersion: tls.VersionTLS13,
 	}
+
+	if len(certFilename) == 0 {
+		return gcreds.NewTLS(config), nil
+	}
+
+	certPool := x509.NewCertPool()
+	f, err := os.Open(certFilename)
+	if err != nil {
+		return nil, e.Wrap(op, err)
+	}
+	defer f.Close()
+
+	b, err := io.ReadAll(f)
+	if err != nil {
+		return nil, e.Wrap(op, err)
+	}
+
+	if !certPool.AppendCertsFromPEM(b) {
+		return nil, e.Wrap(op, err)
+	}
+	config.RootCAs = certPool
+
 	return gcreds.NewTLS(config), nil
 }

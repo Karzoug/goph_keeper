@@ -27,7 +27,7 @@ stop-server:
 	docker compose -f "server/build/docker-compose.yml" stop
 
 run-client:
-	go run -tags debug ./client/cmd/
+	cd ./client/cmd/ && go build -o client && GOPH_KEEPER_CERT_FILENAME='cert.pem' ./client
 
 .PHONY: lint
 lint:
@@ -40,7 +40,7 @@ gen-keys:
 	go run /usr/local/go/src/crypto/tls/generate_cert.go -duration=168h -ca=true -host='localhost' $(date +"%b %d %H:%M:%S %Y")
 	cp cert.pem server/build/cert.pem
 	cp key.pem server/build/key.pem
-	cp cert.pem client/build/cert.pem
+	cp cert.pem client/cmd/cert.pem
 	rm cert.pem && rm key.pem
 
 gen-grpc:
