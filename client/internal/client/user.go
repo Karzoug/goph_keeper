@@ -6,6 +6,9 @@ import (
 	"net/mail"
 	"unicode/utf8"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/Karzoug/goph_keeper/client/internal/model/auth"
 	"github.com/Karzoug/goph_keeper/client/pkg/crypto"
 	pb "github.com/Karzoug/goph_keeper/common/grpc"
@@ -51,6 +54,9 @@ func (c *Client) Register(ctx context.Context, email string, password []byte) er
 			return ErrUserAlreadyExists
 		default:
 			c.logger.Debug(op, err)
+			if status.Code(err) == codes.Unavailable {
+				return ErrServerUnavailable
+			}
 			return ErrServerInternal
 		}
 	}
@@ -113,11 +119,14 @@ func (c *Client) Login(ctx context.Context, email string, password []byte) error
 			if err := c.setCredentialsForOwnerOnly(ctx, email, hash, encrKey); err != nil {
 				c.logger.Debug(op, err)
 				if errors.Is(err, ErrUserNeedAuthentication) {
-					return ErrServerInternal
+					return ErrUserNeedAuthentication
 				}
 				return ErrAppInternal
 			}
 			c.logger.Debug(op, err)
+			if status.Code(err) == codes.Unavailable {
+				return ErrServerUnavailable
+			}
 			return nil
 		}
 	}
@@ -160,6 +169,9 @@ func (c *Client) VerifyEmail(ctx context.Context, code string) error {
 			return ErrUserNotExists
 		default:
 			c.logger.Debug(op, err)
+			if status.Code(err) == codes.Unavailable {
+				return ErrServerUnavailable
+			}
 			return ErrServerInternal
 		}
 	}
@@ -187,9 +199,5 @@ func isValidEmail(email string) bool {
 		return false
 	}
 	_, err := mail.ParseAddress(email)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
