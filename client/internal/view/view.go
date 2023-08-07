@@ -1,6 +1,7 @@
 package view
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -8,11 +9,21 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	c "github.com/Karzoug/goph_keeper/client/internal/client"
+	vc "github.com/Karzoug/goph_keeper/client/internal/view/common"
+	"github.com/Karzoug/goph_keeper/client/internal/view/email"
+	"github.com/Karzoug/goph_keeper/client/internal/view/item/binary"
+	"github.com/Karzoug/goph_keeper/client/internal/view/item/card"
+	"github.com/Karzoug/goph_keeper/client/internal/view/item/choose"
+	"github.com/Karzoug/goph_keeper/client/internal/view/item/password"
+	"github.com/Karzoug/goph_keeper/client/internal/view/item/text"
+	"github.com/Karzoug/goph_keeper/client/internal/view/list"
+	"github.com/Karzoug/goph_keeper/client/internal/view/login"
+	"github.com/Karzoug/goph_keeper/client/internal/view/register"
 )
 
 const (
 	notificationTickerInterval    = 5 * time.Second
-	notificationVisibilityTimeout = 15 * time.Second
+	notificationVisibilityTimeout = 10 * time.Second
 )
 
 const (
@@ -21,47 +32,28 @@ const (
 	online
 )
 
-const (
-	login viewType = iota
-	register
-	emailVerification
-	listItems
-	item
-)
-
-type (
-	credentialsState int8
-	viewType         int8
-)
-
 type (
 	view struct {
 		client            *c.Client
 		currentCredsState credentialsState
-		currentViewType   viewType
+		currentViewType   vc.ViewType
 		subviews          subviews
-		err               errMsg
-		msg               msgMsg
+		err               vc.ErrMsg
+		msg               vc.MsgMsg
 	}
 	subviews struct {
-		listItems         listItemsView
-		login             loginView
-		register          registerView
-		emailVerification emailVerificationView
-		item              itemView
+		listItems         list.View
+		login             login.View
+		register          register.View
+		emailVerification email.View
+		chooseItemType    choose.View
+		password          password.View
+		card              card.View
+		text              text.View
+		binary            binary.View
 	}
-)
-
-type (
-	msgMsg struct {
-		time time.Time
-		msg  string
-	}
-	errMsg struct {
-		time time.Time
-		err  string
-	}
-	tickMsg struct{}
+	tickMsg          struct{}
+	credentialsState int8
 )
 
 func New(client *c.Client) view {
@@ -70,10 +62,10 @@ func New(client *c.Client) view {
 
 func (v view) Init() tea.Cmd {
 	if v.client.HasLocalCredintials() {
-		return tea.Batch(toListItemsView, tick())
+		return tea.Batch(vc.ToViewCmd(vc.ListItems), tick())
 	}
 
-	return tea.Batch(toLoginView, tick())
+	return tea.Batch(vc.ToViewCmd(vc.Login), tick())
 }
 
 // Return the updated view to the Bubble Tea runtime for processing and
@@ -81,96 +73,124 @@ func (v view) Init() tea.Cmd {
 func (v view) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// make sure these key always quit
 	if msg, ok := msg.(tea.KeyMsg); ok {
-		k := msg.String()
-		if k == "ctrl+c" {
+		switch k := msg.Type; k { //nolint:exhaustive
+		case tea.KeyCtrlC:
 			return v, tea.Quit
+		case tea.KeyCtrlX:
+			return v, v.logoutCmd
 		}
+	}
+
+	if _, ok := msg.(tickMsg); ok {
+		if time.Since(v.msg.Time) > notificationVisibilityTimeout {
+			v.msg.Msg = ""
+		}
+		if time.Since(v.err.Time) > notificationVisibilityTimeout {
+			v.err.Err = ""
+		}
+		return v, tick()
+	}
+
+	// handle error if exists
+	if msg, ok := msg.(vc.ErrMsg); ok {
+		v.err = msg
+		return v, nil
+	}
+
+	// handle event message if exists
+	if msg, ok := msg.(vc.MsgMsg); ok {
+		v.msg = msg
+		return v, nil
 	}
 
 	if cmd := updateCredsState(&v); cmd != nil {
 		return v, cmd
 	}
 
-	if _, ok := msg.(tickMsg); ok {
-		if time.Since(v.msg.time) > notificationVisibilityTimeout {
-			v.msg.msg = ""
-		}
-		if time.Since(v.err.time) > notificationVisibilityTimeout {
-			v.err.err = ""
-		}
-		return v, tick()
-	}
-
-	// handle error if exists
-	if msg, ok := msg.(errMsg); ok {
-		v.err = msg
-		return v, nil
-	}
-
-	// handle event message if exists
-	if msg, ok := msg.(msgMsg); ok {
-		v.msg = msg
-		return v, nil
-	}
-
 	// switch to another subview
-	if msg, ok := msg.(toViewMsg); ok {
+	if msg, ok := msg.(vc.ToViewMsg); ok {
 		return switchToAnotherSubview(&v, msg)
 	}
 
 	// handle messages according to the current subview
+	var cmd tea.Cmd
 	switch v.currentViewType {
-	case register:
-		cmd := updateRegisterView(&v, msg)
-		return v, cmd
-	case login:
-		cmd := updateLoginView(&v, msg)
-		return v, cmd
-	case listItems:
-		cmd := updateListItemsView(&v, msg)
-		return v, cmd
-	case emailVerification:
-		cmd := updateEmailVerificationView(&v, msg)
-		return v, cmd
-	case item:
-		cmd := updateItemView(&v, msg)
-		return v, cmd
+	case vc.Register:
+		cmd = v.subviews.register.Update(msg)
+	case vc.Login:
+		cmd = v.subviews.login.Update(msg)
+	case vc.ListItems:
+		cmd = v.subviews.listItems.Update(msg)
+	case vc.EmailVerification:
+		cmd = v.subviews.emailVerification.Update(msg)
+	case vc.Item: // switch to add/edit item by type here
+		cmd = v.updateItemView(msg)
+	case vc.ChooseItemType:
+		cmd = v.subviews.chooseItemType.Update(msg)
+	case vc.Password:
+		cmd = v.subviews.password.Update(msg)
+	case vc.Card:
+		cmd = v.subviews.card.Update(msg)
+	case vc.Text:
+		cmd = v.subviews.text.Update(msg)
+	case vc.Binary:
+		cmd = v.subviews.binary.Update(msg)
 	}
-
-	return v, nil
+	return v, cmd
 }
 
 func (v view) View() string {
-	b := new(strings.Builder)
+	body := new(strings.Builder)
+	help := new(strings.Builder)
 
-	fmt.Fprintf(b, "Goph Keeper: your password manager & vault app\nversion: %s\n\n", v.client.Version())
+	fmt.Fprintf(body, "Goph Keeper: your password manager & vault app\nversion: %s", v.client.Version())
 
-	switch v.currentViewType {
-	case register:
-		viewRegisterView(v.subviews.register, b)
-	case login:
-		viewLoginView(v.subviews.login, b)
-	case emailVerification:
-		viewEmailVerificationView(v.subviews.emailVerification, b)
-	case listItems:
-		viewListItemsView(v.subviews.listItems, b)
-	case item:
-		viewItemView(v.subviews.item, b)
+	switch v.currentViewType { //nolint:exhaustive // missing view.item is transitional view type, uses only to switch to another view
+	case vc.Register:
+		v.subviews.register.View(body, help)
+	case vc.Login:
+		v.subviews.login.View(body, help)
+	case vc.EmailVerification:
+		v.subviews.emailVerification.View(body, help)
+	case vc.ListItems:
+		v.subviews.listItems.View(body, help)
+	case vc.ChooseItemType:
+		v.subviews.chooseItemType.View(body, help)
+	case vc.Password:
+		v.subviews.password.View(body, help)
+	case vc.Text:
+		v.subviews.text.View(body, help)
+	case vc.Card:
+		v.subviews.card.View(body, help)
+	case vc.Binary:
+		v.subviews.binary.View(body, help)
 	}
 
-	printStatus(b, v.currentCredsState)
-
-	if v.msg.msg != "" {
-		fmt.Fprintf(b, "\nMesssage: %s: %s\n\n", v.msg.time.Format(time.TimeOnly), v.msg.msg)
+	if v.currentCredsState == standalone &&
+		v.currentViewType > vc.EmailVerification {
+		body.WriteString("\n\nYou are not logged in to the server, the data is not synced.")
+		if v.currentViewType != vc.Register {
+			help.WriteString("ctrl+l login • ")
+		}
 	}
 
-	if v.err.err != "" {
-		fmt.Fprintf(b, "\nError: %s: %s\n\n", v.err.time.Format(time.TimeOnly), v.err.err)
+	if v.msg.Msg != "" {
+		fmt.Fprintf(body, "\n\nMesssage: %s: %s", v.msg.Time.Format(time.TimeOnly), v.msg.Msg)
 	}
 
-	fmt.Fprintln(b, "\n\nPress ctr + c to quit.")
+	if v.err.Err != "" {
+		fmt.Fprintf(body, "\n\nError: %s: %s", v.err.Time.Format(time.TimeOnly), v.err.Err)
+	}
 
-	return b.String()
+	body.WriteString("\n\n")
+
+	if v.currentCredsState != nothing {
+		help.WriteString("ctrl+x logout • ")
+	}
+
+	help.WriteString("ctrl+c quit")
+	body.WriteString(vc.HelpStyle.Render(help.String()))
+	return body.String()
 }
 
 func updateCredsState(v *view) tea.Cmd {
@@ -183,8 +203,9 @@ func updateCredsState(v *view) tea.Cmd {
 		return nil
 	}
 	v.currentCredsState = nothing
-	if v.currentViewType != login {
-		return toLoginView
+	if v.currentViewType != vc.Login && v.currentViewType != vc.Register {
+		v.currentViewType = vc.Login
+		return vc.ToViewCmd(vc.Login)
 	}
 
 	return nil
@@ -196,8 +217,16 @@ func tick() tea.Cmd {
 	})
 }
 
-func printStatus(b *strings.Builder, s credentialsState) {
-	if s == standalone {
-		fmt.Fprint(b, "\nYou are offline, the data is not synced.\nPress ctrl+l to login")
+func (v view) logoutCmd() tea.Msg {
+	err := v.client.Logout(context.TODO())
+	if err != nil {
+		return vc.ErrMsg{
+			Time: time.Now(),
+			Err:  err.Error(),
+		}
+	}
+	return vc.MsgMsg{
+		Time: time.Now(),
+		Msg:  "You are logged out!",
 	}
 }

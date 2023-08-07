@@ -1,70 +1,49 @@
 package view
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
 
-type toViewMsg struct {
-	viewType viewType
-}
+	vc "github.com/Karzoug/goph_keeper/client/internal/view/common"
+	"github.com/Karzoug/goph_keeper/client/internal/view/email"
+	"github.com/Karzoug/goph_keeper/client/internal/view/item/choose"
+	"github.com/Karzoug/goph_keeper/client/internal/view/list"
+	"github.com/Karzoug/goph_keeper/client/internal/view/login"
+	"github.com/Karzoug/goph_keeper/client/internal/view/register"
+)
 
-func toLoginView() tea.Msg {
-	return toViewMsg{
-		viewType: login,
-	}
-}
+func switchToAnotherSubview(v *view, msg vc.ToViewMsg) (tea.Model, tea.Cmd) {
+	v.currentViewType = msg.ViewType
 
-func toRegisterView() tea.Msg {
-	return toViewMsg{
-		viewType: register,
-	}
-}
-
-func toEmailVerificationView() tea.Msg {
-	return toViewMsg{
-		viewType: emailVerification,
-	}
-}
-
-func toListItemsView() tea.Msg {
-	return toViewMsg{
-		viewType: listItems,
-	}
-}
-
-func toItemView() tea.Msg {
-	return toViewMsg{
-		viewType: item,
-	}
-}
-
-func switchToAnotherSubview(v *view, msg toViewMsg) (tea.Model, tea.Cmd) {
-	v.currentViewType = msg.viewType
-
-	switch msg.viewType {
-	case login:
-		v.subviews.login = initialLoginView()
-		return v, initLoginView()
-	case register:
-		v.subviews.register = initialRegisterView()
-		return v, initRegisterView()
-	case emailVerification:
-		v.subviews.emailVerification = initialEmailVerificationView()
-		return v, initEmailVerificationView()
-	case listItems:
-		v.subviews.listItems = initialListItemsView()
+	switch msg.ViewType { //nolint:exhaustive // missing cases in item view logic
+	case vc.Login:
+		v.subviews.login = login.New(v.client)
+		return v, nil
+	case vc.Register:
+		v.subviews.register = register.New(v.client)
+		return v, nil
+	case vc.EmailVerification:
+		v.subviews.emailVerification = email.New(v.client)
+		return v, nil
+	case vc.ListItems:
+		v.subviews.listItems = list.New(v.client)
 		switch v.currentCredsState {
 		case online:
-			return v, tea.Sequence(v.listItemsNames, v.updateListItems)
+			return v, tea.Sequence(list.ListIDNameCmd(v.client), list.SyncCmd(v.client))
 		case standalone:
-			return v, v.listItemsNames
+			return v, list.ListIDNameCmd(v.client)
 		default:
-			return v, toLoginView
+			return v, vc.ToViewCmd(vc.Login)
 		}
-	case item:
-		v.subviews.item = initialItemView()
+	case vc.Item:
 		if v.currentCredsState == nothing {
-			return v, toLoginView
+			return v, vc.ToViewCmd(vc.Login)
 		}
-		return v, nil // nil, because data loaded by cmd from list view
+	case vc.ChooseItemType:
+		v.subviews.chooseItemType = choose.New()
+		if v.currentCredsState == nothing {
+			return v, vc.ToViewCmd(vc.Login)
+		}
+		return v, nil
 	}
 
 	return v, nil

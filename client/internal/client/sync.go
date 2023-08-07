@@ -5,7 +5,6 @@ import (
 	"errors"
 	"sort"
 
-	"golang.org/x/exp/slog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
