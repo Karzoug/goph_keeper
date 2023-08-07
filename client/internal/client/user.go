@@ -174,7 +174,7 @@ func (c *Client) VerifyEmail(ctx context.Context, code string) error {
 func (c *Client) Logout(ctx context.Context) error {
 	const op = "logout user"
 
-	if err := c.credentialsStorage.DeleteCredentials(); err != nil {
+	if err := c.clearCredentials(ctx); err != nil {
 		c.logger.Debug(op, err)
 		return ErrAppInternal
 	}

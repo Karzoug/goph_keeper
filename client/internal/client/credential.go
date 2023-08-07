@@ -142,6 +142,15 @@ func (c *Client) setToken(token string) error {
 		c.credentialsStorage.SetCredentials(c.credentials.email, token, string(c.credentials.encrKey.Encode())))
 }
 
+func (c *Client) clearToken() error {
+	const op = "clear token"
+
+	c.credentials.token = ""
+
+	return e.Wrap(op,
+		c.credentialsStorage.SetCredentials(c.credentials.email, "", string(c.credentials.encrKey.Encode())))
+}
+
 func (c *Client) clearCredentials(ctx context.Context) error {
 	const op = "clear credentials"
 
