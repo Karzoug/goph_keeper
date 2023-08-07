@@ -21,7 +21,7 @@ func (s *storage) SetCredentials(email, token, encrKey string) error {
 	if err != nil {
 		return e.Wrap(op, err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	stmt, err := tx.Prepare(`INSERT INTO app(key,value) VALUES(?, ?)
 	ON CONFLICT(key) 
@@ -53,7 +53,7 @@ func (s *storage) GetCredentials() (email, token, encrKey string, err error) {
 	if err != nil {
 		return "", "", "", e.Wrap(op, err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	stmt, err := tx.Prepare(`SELECT value FROM app WHERE key = ?;`)
 	if err != nil {
@@ -89,7 +89,7 @@ func (s *storage) DeleteCredentials() error {
 	if err != nil {
 		return e.Wrap(op, err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	stmt, err := tx.Prepare(`DELETE FROM app WHERE key = ?;`)
 	if err != nil {

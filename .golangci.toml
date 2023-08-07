@@ -19,7 +19,6 @@ disable-all = true
 enable = [
   "bodyclose",
   "dogsled",
-  "dupl",
   "errcheck",
   "goimports",
   "goprintffuncname",
