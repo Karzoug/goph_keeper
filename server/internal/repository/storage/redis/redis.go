@@ -12,6 +12,10 @@ import (
 	"github.com/Karzoug/goph_keeper/server/internal/repository/storage"
 )
 
+const (
+	URIPreffix = "redis:"
+)
+
 type client struct {
 	rdb *redis.Client
 }

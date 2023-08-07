@@ -24,7 +24,7 @@ type Storage interface {
 	Close() error
 }
 
-type kvStorage interface {
+type KvStorage interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value string, expiration time.Duration) error
 	Delete(ctx context.Context, key string) error
@@ -39,9 +39,9 @@ type mailSender interface {
 type Option func(*Service)
 
 type caches struct {
-	auth       kvStorage
-	mail       kvStorage
-	lastUpdate kvStorage
+	auth       KvStorage
+	mail       KvStorage
+	lastUpdate KvStorage
 }
 
 type Service struct {
@@ -96,19 +96,19 @@ func WithSLogger(logger *slog.Logger) Option {
 	}
 }
 
-func WithAuthCache(cache kvStorage) Option {
+func WithAuthCache(cache KvStorage) Option {
 	return func(s *Service) {
 		s.caches.auth = cache
 	}
 }
 
-func WithMailCache(cache kvStorage) Option {
+func WithMailCache(cache KvStorage) Option {
 	return func(s *Service) {
 		s.caches.mail = cache
 	}
 }
 
-func WithLastUpdateCache(cache kvStorage) Option {
+func WithLastUpdateCache(cache KvStorage) Option {
 	return func(s *Service) {
 		s.caches.lastUpdate = cache
 	}

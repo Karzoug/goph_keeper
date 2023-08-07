@@ -21,4 +21,6 @@ type Config struct {
 	// Storage is a configuration for storage.
 	Storage                 storage.Config `envPrefix:"STORAGE_"`
 	StorageMaxSizeItemValue uint           `envPrefix:"STORAGE_MAX_SIZE_ITEM_VALUE,notempty"  envDefault:"1048576"`
+	AuthCache               storage.Config `envPrefix:"AUTH_CACHE_"`
+	MailCache               storage.Config `envPrefix:"MAIL_CACHE_"`
 }

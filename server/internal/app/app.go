@@ -10,11 +10,14 @@ import (
 
 	"github.com/Karzoug/goph_keeper/pkg/e"
 	"github.com/Karzoug/goph_keeper/server/internal/config"
+	scfg "github.com/Karzoug/goph_keeper/server/internal/config/service"
 	"github.com/Karzoug/goph_keeper/server/internal/config/storage"
 	"github.com/Karzoug/goph_keeper/server/internal/delivery/grpc"
 	rtasks "github.com/Karzoug/goph_keeper/server/internal/delivery/rtask"
 	"github.com/Karzoug/goph_keeper/server/internal/repository/mail/smtp"
 	rtaskc "github.com/Karzoug/goph_keeper/server/internal/repository/rtask"
+	"github.com/Karzoug/goph_keeper/server/internal/repository/storage/postgres"
+	"github.com/Karzoug/goph_keeper/server/internal/repository/storage/redis"
 	"github.com/Karzoug/goph_keeper/server/internal/repository/storage/sqlite"
 	"github.com/Karzoug/goph_keeper/server/internal/service"
 )
@@ -41,17 +44,22 @@ func Run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	}
 	logger.Info("app run: smtp client created")
 
-	service, err := service.New(cfg.Service,
-		serviceStorage,
-		rtaskClient,
-		smtpClient,
-		service.WithSLogger(logger))
+	opts, err := buildServiceOptions(cfg.Service)
+	if err != nil {
+		return e.Wrap(op, err)
+	}
+	opts = append(opts, service.WithSLogger(logger))
+
+	service, err := service.New(cfg.Service, serviceStorage, rtaskClient, smtpClient, opts...)
 	if err != nil {
 		return e.Wrap(op, err)
 	}
 	logger.Info("app run: service created")
 
-	grpcServer := grpc.New(cfg.GRPC, service, logger)
+	grpcServer, err := grpc.New(cfg.GRPC, service, logger)
+	if err != nil {
+		return e.Wrap(op, err)
+	}
 	logger.Info("app run: grpc server created")
 
 	rtaskServer, err := rtasks.New(cfg.RTask, service, logger)
@@ -85,6 +93,38 @@ func buildServiceStorage(ctx context.Context, cfg storage.Config) (service.Stora
 		return sqlite.New(cfg)
 	case strings.HasPrefix(cfg.URI, "grpc://"):
 		panic("not implemented")
+	default:
+		return nil, errors.New("unknown storage type")
+	}
+}
+
+func buildServiceOptions(cfg scfg.Config) ([]service.Option, error) {
+	opts := make([]service.Option, 0)
+
+	if len(cfg.AuthCache.URI) != 0 {
+		ac, err := buildServiceCache(cfg.AuthCache)
+		if err != nil {
+			return nil, err
+		} else {
+			opts = append(opts, service.WithAuthCache(ac))
+		}
+	}
+	if len(cfg.MailCache.URI) != 0 {
+		mc, err := buildServiceCache(cfg.MailCache)
+		if err != nil {
+			return nil, err
+		} else {
+			opts = append(opts, service.WithMailCache(mc))
+		}
+	}
+
+	return opts, nil
+}
+
+func buildServiceCache(cfg storage.Config) (service.KvStorage, error) {
+	switch {
+	case strings.HasPrefix(cfg.URI, redis.URIPreffix):
+		return redis.New(cfg)
 	default:
 		return nil, errors.New("unknown storage type")
 	}
