@@ -2,6 +2,10 @@
 
 GophKeeper представляет собой клиент-серверную систему, позволяющую пользователю надёжно и безопасно хранить логины, пароли, бинарные данные и прочую приватную информацию.
 
+[![asciicast](https://asciinema.org/a/601014.svg)](https://asciinema.org/a/601014?speed=3)
+
+[![asciicast](https://asciinema.org/a/601016.svg)](https://asciinema.org/a/601016?speed=2.5)
+
 # Запуск
 Для локального запуска следует использовать Docker и предложенный Makefile:
 - up-server:
