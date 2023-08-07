@@ -3,7 +3,7 @@ module github.com/Karzoug/goph_keeper/server
 go 1.20
 
 require (
-	github.com/Karzoug/goph_keeper/common v0.2.0
+	github.com/Karzoug/goph_keeper/common v0.5.0
 	github.com/Karzoug/goph_keeper/pkg v0.3.0
 )
 

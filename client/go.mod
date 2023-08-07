@@ -3,7 +3,7 @@ module github.com/Karzoug/goph_keeper/client
 go 1.20
 
 require (
-	github.com/Karzoug/goph_keeper/common v0.2.0
+	github.com/Karzoug/goph_keeper/common v0.5.0
 	github.com/Karzoug/goph_keeper/pkg v0.3.0
 )
 
@@ -14,6 +14,7 @@ require (
 	github.com/matthewhartstonge/argon2 v0.3.3
 	github.com/rs/xid v1.5.0
 	github.com/stretchr/testify v1.8.1
+	golang.org/x/crypto v0.10.0
 	golang.org/x/exp v0.0.0-20230728194245-b0cb94b80691
 	google.golang.org/grpc v1.57.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -45,7 +46,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	golang.org/x/crypto v0.10.0
 	golang.org/x/mod v0.11.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect

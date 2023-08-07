@@ -1,5 +1,5 @@
-github.com/Karzoug/goph_keeper/common v0.2.0 h1:feu4jgHXvdwRCyXZTCsPgDevuFD2a0/mCYeVrKM701o=
-github.com/Karzoug/goph_keeper/common v0.2.0/go.mod h1:upnJhBSTDmTs4kl47OEJfVU7GfIu/746FSgIx7bqKL0=
+github.com/Karzoug/goph_keeper/common v0.5.0 h1:07eN1J2xZxjNaaDEp2KctaxzYcCOSa/afMj4EL09MJo=
+github.com/Karzoug/goph_keeper/common v0.5.0/go.mod h1:upnJhBSTDmTs4kl47OEJfVU7GfIu/746FSgIx7bqKL0=
 github.com/Karzoug/goph_keeper/pkg v0.3.0 h1:B+68eoi2mrQcvGIq3VKF2zsH0BsQL+rKaaYP5RWjVLk=
 github.com/Karzoug/goph_keeper/pkg v0.3.0/go.mod h1:sJrwlKKEdjev4tppBj1ehzu+MA6AzmudcyXYloUCZzY=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=

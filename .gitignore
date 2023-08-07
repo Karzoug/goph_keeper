@@ -23,3 +23,6 @@ server/cmd/server
 
 # Go workspace file
 go.work*
+
+# Certificates
+*.pem
