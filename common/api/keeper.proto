@@ -25,17 +25,17 @@ message LoginResponse {
 enum IType {
     UNKNOWN = 0;
     PASSWORD = 1;
-	CARD = 2;
-	TEXT = 3;
-	BINARY = 4;
+    CARD = 2;
+    TEXT = 3;
+    BINARY = 4;
     BINARY_LARGE = 5;
-  }
+}
 
 message VaultItem {
     string id   = 1;
     string name = 2;
-	IType itype = 3;
-	bytes value = 4;
+    IType itype = 3;
+    bytes value = 4;
     int64 server_updated_at = 5;
 }
 
@@ -60,4 +60,4 @@ service GophKeeperService {
     rpc Login(LoginRequest) returns (LoginResponse);
     rpc ListVaultItems(ListVaultItemsRequest) returns (ListVaultItemsResponse);
     rpc SetVaultItem(SetVaultItemRequest) returns (SetVaultItemResponse);
-  }
+}
