@@ -46,9 +46,9 @@ func (s *Service) ListVaultItems(ctx context.Context, email string, since int64)
 		} else {
 			t, err := strconv.ParseInt(str, 10, 64)
 			if err == nil {
-				// if time in cache (on server) is older than given since date
-				// then return empty slice of items and time of last update
-				if t < since {
+				// if time in cache (on server) is older or equal than given since date
+				// then return empty slice of items
+				if since >= t {
 					return make([]vault.Item, 0), nil
 				}
 			}
