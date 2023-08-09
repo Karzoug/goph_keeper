@@ -149,7 +149,19 @@ func (s *Service) AuthUser(ctx context.Context, tokenString string) (string, err
 func (s *Service) getUser(ctx context.Context, email string, authHash []byte) (user.User, error) {
 	const op = "get user"
 
-	u, err := s.storage.GetUser(ctx, email)
+	u, err := user.New(email, authHash)
+	if err != nil {
+		switch {
+		case errors.Is(err, user.ErrInvalidEmailFormat):
+			return user.User{}, ErrInvalidEmailFormat
+		case errors.Is(err, user.ErrInvalidHashFormat):
+			return user.User{}, ErrInvalidHashFormat
+		default:
+			return user.User{}, e.Wrap(op, err)
+		}
+	}
+
+	u, err = s.storage.GetUser(ctx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrRecordNotFound) {
 			return user.User{}, ErrUserNotExists

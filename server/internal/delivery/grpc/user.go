@@ -44,6 +44,10 @@ func (s *server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResp
 
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrInvalidEmailFormat):
+			return nil, pb.ErrInvalidEmailFormat
+		case errors.Is(err, service.ErrInvalidHashFormat):
+			return nil, pb.ErrInvalidHashFormat
 		case errors.Is(err, service.ErrUserInvalidHash):
 			return nil, pb.ErrUserInvalidHash
 		case errors.Is(err, service.ErrUserEmailNotVerified):
