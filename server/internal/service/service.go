@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/exp/slog"
+	"log/slog"
 
 	"github.com/Karzoug/goph_keeper/common/model/vault"
 	scfg "github.com/Karzoug/goph_keeper/server/internal/config/service"

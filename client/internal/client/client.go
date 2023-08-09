@@ -7,7 +7,8 @@ import (
 	"io"
 	"os"
 
-	"golang.org/x/exp/slog"
+	"log/slog"
+
 	"google.golang.org/grpc"
 	gcreds "google.golang.org/grpc/credentials"
 

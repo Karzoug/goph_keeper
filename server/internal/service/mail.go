@@ -7,8 +7,9 @@ import (
 	"errors"
 	"fmt"
 
+	"log/slog"
+
 	"github.com/hibiken/asynq"
-	"golang.org/x/exp/slog"
 
 	"github.com/Karzoug/goph_keeper/pkg/e"
 	am "github.com/Karzoug/goph_keeper/server/assets/mail"

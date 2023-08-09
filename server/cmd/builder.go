@@ -4,8 +4,9 @@ import (
 	"os"
 	"reflect"
 
+	"log/slog"
+
 	"github.com/caarlos0/env/v9"
-	"golang.org/x/exp/slog"
 
 	"github.com/Karzoug/goph_keeper/pkg/logger/slog/pretty"
 	"github.com/Karzoug/goph_keeper/server/internal/config"

@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"golang.org/x/exp/slog"
+	"log/slog"
 
 	"github.com/Karzoug/goph_keeper/client/internal/app"
 	"github.com/Karzoug/goph_keeper/client/internal/config"

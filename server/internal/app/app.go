@@ -5,7 +5,8 @@ import (
 	"errors"
 	"strings"
 
-	"golang.org/x/exp/slog"
+	"log/slog"
+
 	"golang.org/x/sync/errgroup"
 
 	"github.com/Karzoug/goph_keeper/pkg/e"

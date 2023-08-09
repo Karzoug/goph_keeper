@@ -1,8 +1,9 @@
 package app
 
 import (
+	"log/slog"
+
 	tea "github.com/charmbracelet/bubbletea"
-	"golang.org/x/exp/slog"
 
 	"github.com/Karzoug/goph_keeper/client/internal/client"
 	"github.com/Karzoug/goph_keeper/client/internal/config"

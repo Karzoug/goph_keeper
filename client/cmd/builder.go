@@ -3,8 +3,9 @@ package main
 import (
 	"os"
 
+	"log/slog"
+
 	"github.com/caarlos0/env/v9"
-	"golang.org/x/exp/slog"
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/Karzoug/goph_keeper/client/internal/config"

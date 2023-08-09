@@ -3,8 +3,9 @@ package rtask
 import (
 	"context"
 
+	"log/slog"
+
 	"github.com/hibiken/asynq"
-	"golang.org/x/exp/slog"
 
 	"github.com/Karzoug/goph_keeper/pkg/e"
 	"github.com/Karzoug/goph_keeper/server/internal/config/rtask"

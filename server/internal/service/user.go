@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"golang.org/x/exp/slog"
+	"log/slog"
 
 	"github.com/Karzoug/goph_keeper/pkg/e"
 	"github.com/Karzoug/goph_keeper/server/internal/model/auth/token"

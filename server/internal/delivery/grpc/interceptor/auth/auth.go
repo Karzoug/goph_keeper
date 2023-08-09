@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"golang.org/x/exp/slog"
+	"log/slog"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 

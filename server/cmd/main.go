@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"golang.org/x/exp/slog"
+	"log/slog"
 
 	"github.com/Karzoug/goph_keeper/pkg/logger/slog/sl"
 	"github.com/Karzoug/goph_keeper/server/internal/app"
@@ -25,7 +25,6 @@ func main() {
 	}
 
 	logger := buildLogger(cfg.Env)
-	slog.SetDefault(logger)
 
 	logger.Info(
 		"starting goph-keeper server",
