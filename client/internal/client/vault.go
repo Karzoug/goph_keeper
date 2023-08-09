@@ -68,7 +68,7 @@ func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, va
 		switch {
 		case errors.Is(err, pb.ErrEmptyAuthData),
 			errors.Is(err, pb.ErrEmptyAuthData),
-			errors.Is(err, pb.ErrUserInvalidToken),
+			errors.Is(err, pb.ErrInvalidTokenFormat),
 			errors.Is(err, pb.ErrUserNeedAuthentication):
 			_ = c.clearToken()
 			return nil

@@ -19,8 +19,8 @@ const (
 )
 
 var (
-	ErrInvalidToken      = errors.New("invalid token")
-	ErrSecretKeyTooShort = fmt.Errorf("secret key must be more or equal than %d bytes", MinSecretKeyLength)
+	ErrInvalidTokenFormat = errors.New("invalid token format")
+	ErrSecretKeyTooShort  = fmt.Errorf("secret key must be more or equal than %d bytes", MinSecretKeyLength)
 )
 
 // SecretKey is a key for signing tokens.
@@ -68,20 +68,20 @@ func New(exp time.Time, key SecretKey) *token {
 func FromString(s string, key SecretKey) (*token, error) {
 	b, err := hex.DecodeString(s)
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, ErrInvalidTokenFormat
 	}
 
 	if len(b) != tokenSize {
-		return nil, ErrInvalidToken
+		return nil, ErrInvalidTokenFormat
 	}
 
 	if b[0] != tokenVersion {
-		return nil, ErrInvalidToken
+		return nil, ErrInvalidTokenFormat
 	}
 
 	id, err := xid.FromBytes(b[1:13])
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, ErrInvalidTokenFormat
 	}
 	t := &token{
 		id:  id.String(),
@@ -89,11 +89,11 @@ func FromString(s string, key SecretKey) (*token, error) {
 	}
 	err = t.exp.UnmarshalBinary(b[13:28])
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, ErrInvalidTokenFormat
 	}
 
 	if !bytes.Equal(b[28:], generateSign(b[:28], key)) {
-		return nil, ErrInvalidToken
+		return nil, ErrInvalidTokenFormat
 	}
 
 	return t, nil

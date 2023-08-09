@@ -128,7 +128,7 @@ func (s *Service) AuthUser(ctx context.Context, tokenString string) (string, err
 
 	token, err := token.FromString(tokenString, s.cfg.Token.SecretKey)
 	if err != nil {
-		return "", e.Wrap(op, ErrUserInvalidToken)
+		return "", e.Wrap(op, ErrInvalidTokenFormat)
 	}
 	if token.IsExpired() {
 		return "", e.Wrap(op, ErrUserNeedAuthentication)

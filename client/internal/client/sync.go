@@ -55,7 +55,7 @@ func (c *Client) updateVaultItemsFromServer(ctx context.Context) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, pb.ErrEmptyAuthData),
-			errors.Is(err, pb.ErrUserInvalidToken),
+			errors.Is(err, pb.ErrInvalidTokenFormat),
 			errors.Is(err, pb.ErrUserNeedAuthentication):
 			c.logger.Debug(op, sl.Error(err))
 			_ = c.clearToken()
@@ -182,7 +182,7 @@ func (c *Client) sendVaultItem(ctx context.Context, item vault.Item) (int64, err
 		switch {
 		case errors.Is(err, pb.ErrEmptyAuthData),
 			errors.Is(err, pb.ErrEmptyAuthData),
-			errors.Is(err, pb.ErrUserInvalidToken),
+			errors.Is(err, pb.ErrInvalidTokenFormat),
 			errors.Is(err, pb.ErrUserNeedAuthentication):
 			return 0, ErrUserNeedAuthentication
 		case errors.Is(err, pb.ErrVaultItemConflictVersion):

@@ -52,8 +52,8 @@ func AuthUnaryServerInterceptor(authFunc AuthFunc, publicMethods []string, logge
 		email, err := authFunc(ctx, tokenSlice[0])
 		if err != nil {
 			switch {
-			case errors.Is(err, service.ErrUserInvalidToken):
-				return nil, gerr.ErrUserInvalidToken
+			case errors.Is(err, service.ErrInvalidTokenFormat):
+				return nil, gerr.ErrInvalidTokenFormat
 			case errors.Is(err, service.ErrUserNeedAuthentication):
 				return nil, gerr.ErrUserNeedAuthentication
 			default:

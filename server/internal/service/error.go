@@ -9,7 +9,7 @@ var (
 	ErrUserInvalidHash          = errors.New("user hash not valid")
 	ErrInvalidEmailFormat       = errors.New("invalid email format")
 	ErrInvalidHashFormat        = errors.New("invalid hash format")
-	ErrUserInvalidToken         = errors.New("user token not valid")
+	ErrInvalidTokenFormat       = errors.New("user token invalid format")
 	ErrUserNeedAuthentication   = errors.New("user need authentication")
 	ErrVaultItemVersionConflict = errors.New("vault item: conflict version")
 	ErrVaultItemValueTooBig     = errors.New("vault item: big value")
