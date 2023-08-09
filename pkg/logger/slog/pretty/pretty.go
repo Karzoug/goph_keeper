@@ -5,9 +5,10 @@ import (
 	"io"
 	stdLog "log"
 
+	"log/slog"
+
 	"github.com/fatih/color"
 	"github.com/goccy/go-json"
-	"golang.org/x/exp/slog"
 )
 
 // HandlerOptions are options for a Handler.

@@ -1,7 +1,7 @@
 package sl
 
 import (
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 func Error(err error) slog.Attr {

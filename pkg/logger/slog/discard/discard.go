@@ -3,7 +3,7 @@ package discard
 import (
 	"context"
 
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 // NewDiscardLogger creates a new logger that discards all messages.
