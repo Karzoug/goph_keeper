@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -21,7 +22,7 @@ type storage struct {
 	db *sql.DB
 }
 
-func New() (*storage, error) {
+func New(ctx context.Context) (*storage, error) {
 	op := "create sqlite storage"
 
 	db, err := sql.Open("sqlite", dbFilename)
@@ -29,7 +30,7 @@ func New() (*storage, error) {
 		return nil, e.Wrap(op, err)
 	}
 
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		return nil, e.Wrap(op, err)
 	}
 

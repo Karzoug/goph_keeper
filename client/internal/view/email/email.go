@@ -61,7 +61,10 @@ func (v View) View(body *strings.Builder, help *strings.Builder) {
 }
 
 func (v View) cmd() tea.Msg {
-	err := v.client.VerifyEmail(context.TODO(), v.textInput.Value())
+	ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
+	defer cancel()
+
+	err := v.client.VerifyEmail(ctx, v.textInput.Value())
 	if err != nil {
 		if errors.Is(err, client.ErrInvalidEmailVerificationCode) {
 			return vc.ErrMsg{

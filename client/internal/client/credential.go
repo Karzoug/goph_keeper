@@ -82,7 +82,7 @@ func (c *Client) setCredentialsForOwnerOnly(ctx context.Context, email string, h
 		authHash: hash,
 	}
 
-	if err := c.credentialsStorage.SetCredentials(email, "", string(encrKey.Encode())); err != nil {
+	if err := c.credentialsStorage.SetCredentials(ctx, email, "", string(encrKey.Encode())); err != nil {
 		return e.Wrap(op, err)
 	}
 
@@ -121,14 +121,14 @@ func (c *Client) setCredentialsForced(ctx context.Context, email string, hash au
 		authHash: hash,
 	}
 
-	if err := c.credentialsStorage.SetCredentials(email, "", string(encrKey.Encode())); err != nil {
+	if err := c.credentialsStorage.SetCredentials(ctx, email, "", string(encrKey.Encode())); err != nil {
 		return e.Wrap(op, err)
 	}
 
 	return nil
 }
 
-func (c *Client) setToken(token string) error {
+func (c *Client) setToken(ctx context.Context, token string) error {
 	const op = "set token"
 
 	c.credentials.authHash = nil
@@ -139,16 +139,16 @@ func (c *Client) setToken(token string) error {
 	}
 
 	return e.Wrap(op,
-		c.credentialsStorage.SetCredentials(c.credentials.email, token, string(c.credentials.encrKey.Encode())))
+		c.credentialsStorage.SetCredentials(ctx, c.credentials.email, token, string(c.credentials.encrKey.Encode())))
 }
 
-func (c *Client) clearToken() error {
+func (c *Client) clearToken(ctx context.Context) error {
 	const op = "clear token"
 
 	c.credentials.token = ""
 
 	return e.Wrap(op,
-		c.credentialsStorage.SetCredentials(c.credentials.email, "", string(c.credentials.encrKey.Encode())))
+		c.credentialsStorage.SetCredentials(ctx, c.credentials.email, "", string(c.credentials.encrKey.Encode())))
 }
 
 func (c *Client) clearCredentials(ctx context.Context) error {
@@ -157,13 +157,13 @@ func (c *Client) clearCredentials(ctx context.Context) error {
 	c.credentials = credentials{}
 
 	return e.Wrap(op,
-		c.credentialsStorage.DeleteCredentials())
+		c.credentialsStorage.DeleteCredentials(ctx))
 }
 
-func (c *Client) restoreCredentials() error {
+func (c *Client) restoreCredentials(ctx context.Context) error {
 	const op = "restore credentials"
 
-	email, token, encrKeyString, err := c.credentialsStorage.GetCredentials()
+	email, token, encrKeyString, err := c.credentialsStorage.GetCredentials(ctx)
 	if err != nil {
 		if errors.Is(err, storage.ErrRecordNotFound) {
 			return nil

@@ -19,6 +19,8 @@ var (
 	BlurredButton = fmt.Sprintf("[ %s ]", BlurredStyle.Render("Submit"))
 )
 
+const StandartTimeout = 3 * time.Second // used for most view cmds
+
 const (
 	Login ViewType = iota
 	Register

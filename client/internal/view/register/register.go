@@ -134,7 +134,10 @@ func (v View) cmd() tea.Msg {
 	email := v.inputs[0].Value()
 	password := []byte(v.inputs[1].Value())
 
-	err := v.client.Register(context.TODO(), email, password)
+	ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
+	defer cancel()
+
+	err := v.client.Register(ctx, email, password)
 	if err != nil {
 		return vc.ErrMsg{
 			Time: time.Now(),

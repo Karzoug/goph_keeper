@@ -12,6 +12,8 @@ import (
 	vc "github.com/Karzoug/goph_keeper/client/internal/view/common"
 )
 
+const syncCmdTimeout = 10 * time.Second
+
 type (
 	successfulListMsg []vault.IDName
 	successfulSyncMsg struct{}
@@ -19,7 +21,10 @@ type (
 
 func ListIDNameCmd(c *client.Client) tea.Cmd {
 	return func() tea.Msg {
-		in, err := c.ListVaultItemsIDName(context.TODO())
+		ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
+		defer cancel()
+
+		in, err := c.ListVaultItemsIDName(ctx)
 		if err != nil {
 			return vc.ErrMsg{
 				Time: time.Now(),
@@ -32,7 +37,10 @@ func ListIDNameCmd(c *client.Client) tea.Cmd {
 
 func SyncCmd(c *client.Client) tea.Cmd {
 	return func() tea.Msg {
-		err := c.SyncVaultItems(context.TODO())
+		ctx, cancel := context.WithTimeout(context.TODO(), syncCmdTimeout)
+		defer cancel()
+
+		err := c.SyncVaultItems(ctx)
 		if err != nil {
 			if errors.Is(err, client.ErrUserNeedAuthentication) {
 				return nil

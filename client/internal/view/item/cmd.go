@@ -22,11 +22,15 @@ type (
 )
 
 func GetCmd(c *client.Client, id string) tea.Cmd {
-	item, value, err := c.DecryptAndGetVaultItem(context.TODO(), id)
-	if err != nil {
-		return tea.Batch(vc.ShowErrCmd(err.Error()), vc.ToViewCmd(vc.ListItems))
-	}
 	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
+		defer cancel()
+
+		item, value, err := c.DecryptAndGetVaultItem(ctx, id)
+		if err != nil {
+			return tea.Batch(vc.ShowErrCmd(err.Error()), vc.ToViewCmd(vc.ListItems))
+		}
+
 		return SuccessfulGetItemMsg{
 			Item:           item,
 			DecryptedValue: value,
@@ -36,7 +40,10 @@ func GetCmd(c *client.Client, id string) tea.Cmd {
 
 func SetCmd(c *client.Client, item vault.Item, value any) tea.Cmd {
 	return func() tea.Msg {
-		err := c.EncryptAndSetVaultItem(context.TODO(), item, value)
+		ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
+		defer cancel()
+
+		err := c.EncryptAndSetVaultItem(ctx, item, value)
 		if err != nil {
 			switch {
 			case errors.Is(err, client.ErrConflictVersion):

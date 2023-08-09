@@ -135,7 +135,7 @@ func (c *Client) Login(ctx context.Context, email string, password []byte) error
 		c.logger.Debug(op, err)
 		return ErrAppInternal
 	}
-	if err := c.setToken(resp.Token); err != nil {
+	if err := c.setToken(ctx, resp.Token); err != nil {
 		c.logger.Debug(op, err)
 		return ErrAppInternal
 	}
@@ -176,7 +176,7 @@ func (c *Client) VerifyEmail(ctx context.Context, code string) error {
 		}
 	}
 
-	if err := c.setToken(resp.Token); err != nil {
+	if err := c.setToken(ctx, resp.Token); err != nil {
 		c.logger.Debug(op, err)
 		return ErrAppInternal
 	}

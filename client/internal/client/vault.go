@@ -70,7 +70,7 @@ func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, va
 			errors.Is(err, pb.ErrEmptyAuthData),
 			errors.Is(err, pb.ErrInvalidTokenFormat),
 			errors.Is(err, pb.ErrUserNeedAuthentication):
-			_ = c.clearToken()
+			_ = c.clearToken(ctx)
 			return nil
 		case errors.Is(err, pb.ErrVaultItemConflictVersion):
 			// it's ok, next update method iteration hadle this conflict

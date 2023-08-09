@@ -53,7 +53,10 @@ func createCmd(c *client.Client, vitem vault.Item, filename string) tea.Cmd {
 			}
 		}
 
-		err = c.EncryptAndSetVaultItem(context.TODO(), vitem, vault.Binary{Value: value})
+		ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
+		defer cancel()
+
+		err = c.EncryptAndSetVaultItem(ctx, vitem, vault.Binary{Value: value})
 		if err != nil {
 			switch {
 			case errors.Is(err, client.ErrConflictVersion):

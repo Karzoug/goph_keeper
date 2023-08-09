@@ -144,7 +144,10 @@ func (v View) cmd() tea.Msg {
 	email := v.inputs[0].Value()
 	password := []byte(v.inputs[1].Value())
 
-	err := v.client.Login(context.TODO(), email, password)
+	ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
+	defer cancel()
+
+	err := v.client.Login(ctx, email, password)
 	if err != nil {
 		if errors.Is(err, client.ErrUserEmailNotVerified) {
 			return needEmailVerificationMsg{}

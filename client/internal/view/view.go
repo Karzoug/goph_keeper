@@ -218,7 +218,10 @@ func tick() tea.Cmd {
 }
 
 func (v view) logoutCmd() tea.Msg {
-	err := v.client.Logout(context.TODO())
+	ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
+	defer cancel()
+
+	err := v.client.Logout(ctx)
 	if err != nil {
 		return vc.ErrMsg{
 			Time: time.Now(),

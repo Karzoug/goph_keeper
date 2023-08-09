@@ -58,7 +58,7 @@ func (c *Client) updateVaultItemsFromServer(ctx context.Context) error {
 			errors.Is(err, pb.ErrInvalidTokenFormat),
 			errors.Is(err, pb.ErrUserNeedAuthentication):
 			c.logger.Debug(op, sl.Error(err))
-			_ = c.clearToken()
+			_ = c.clearToken(ctx)
 			return ErrUserNeedAuthentication
 		default:
 			c.logger.Debug(op, err)
@@ -144,7 +144,7 @@ func (c *Client) sendModifiedVaultItemsToServer(ctx context.Context) error {
 				// next method iteration hadle this conflict
 				return nil
 			case errors.Is(err, ErrUserNeedAuthentication):
-				_ = c.clearToken()
+				_ = c.clearToken(ctx)
 				return nil
 			}
 			return err

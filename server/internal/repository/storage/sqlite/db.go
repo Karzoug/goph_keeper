@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 
 	_ "modernc.org/sqlite"
@@ -20,7 +21,7 @@ type storage struct {
 	db *sql.DB
 }
 
-func New(cfg sconfig.Config) (*storage, error) {
+func New(ctx context.Context, cfg sconfig.Config) (*storage, error) {
 	op := "create sqlite storage"
 
 	db, err := sql.Open("sqlite", cfg.URI)
@@ -28,7 +29,7 @@ func New(cfg sconfig.Config) (*storage, error) {
 		return nil, e.Wrap(op, err)
 	}
 
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		return nil, e.Wrap(op, err)
 	}
 

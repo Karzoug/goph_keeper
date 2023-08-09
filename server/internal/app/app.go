@@ -91,7 +91,7 @@ func buildServiceStorage(ctx context.Context, cfg storage.Config) (service.Stora
 	case strings.HasPrefix(cfg.URI, postgres.URIPreffix):
 		return postgres.New(ctx, cfg)
 	case strings.HasPrefix(cfg.URI, sqlite.URIPreffix):
-		return sqlite.New(cfg)
+		return sqlite.New(ctx, cfg)
 	case strings.HasPrefix(cfg.URI, "grpc://"):
 		panic("not implemented")
 	default:

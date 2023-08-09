@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"io"
 	"os"
+	"time"
 
 	"log/slog"
 
@@ -19,14 +20,16 @@ import (
 	"github.com/Karzoug/goph_keeper/pkg/e"
 )
 
+const createClientTimeout = 5 * time.Second
+
 type clientCredentialsStorage interface {
 	// SetCredentials adds or updates email, token and encryption key.
-	SetCredentials(email, token, encrKey string) error
+	SetCredentials(ctx context.Context, email, token, encrKey string) error
 	//GetCredentials returns email and encryption key, or an error if they are not found.
 	// It can also return a token if it exists.
-	GetCredentials() (email, token, encrKey string, err error)
+	GetCredentials(context.Context) (email, token, encrKey string, err error)
 	// DeleteCredentials deletes all credentials: email, token and encryption key.
-	DeleteCredentials() error
+	DeleteCredentials(context.Context) error
 	// Close closes storage if applicable.
 	Close() error
 }
@@ -61,19 +64,22 @@ type Client struct {
 func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	const op = "create client"
 
+	ctx, cancel := context.WithTimeout(context.Background(), createClientTimeout)
+	defer cancel()
+
 	c := &Client{
 		cfg:    cfg,
 		logger: logger.With(slog.String("from", "client")),
 	}
 
-	ss, err := sqlite.New()
+	ss, err := sqlite.New(ctx)
 	if err != nil {
 		return nil, e.Wrap(op, err)
 	}
 	c.credentialsStorage = ss // TODO: add other credentials storages
 	c.storage = ss
 
-	if err := c.restoreCredentials(); err != nil {
+	if err := c.restoreCredentials(ctx); err != nil {
 		c.logger.Debug(op, err)
 	}
 
@@ -82,7 +88,7 @@ func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 		return nil, e.Wrap(op, err)
 	}
 	addr := cfg.Host + ":" + cfg.Port
-	c.conn, err = grpc.Dial(addr, grpc.WithTransportCredentials(cs))
+	c.conn, err = grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(cs))
 	if err != nil {
 		return nil, e.Wrap(op, err)
 	}
