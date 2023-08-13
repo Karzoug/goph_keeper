@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -258,7 +257,6 @@ func (v View) View(body *strings.Builder, help *strings.Builder) {
 
 func (v View) cmd() tea.Cmd {
 	v.item.Name = v.nameInput.Value()
-	v.item.ClientUpdatedAt = time.Now().Unix()
 
 	if v.isNewItem {
 		return createCmd(v.client, v.item, v.selectedInFilepicker)

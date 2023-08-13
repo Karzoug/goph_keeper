@@ -82,6 +82,7 @@ func (c *Client) updateVaultItemsFromServer(ctx context.Context) error {
 			Value:           resp.Items[i].Value,
 			ServerUpdatedAt: resp.Items[i].ServerUpdatedAt,
 			ClientUpdatedAt: resp.Items[i].ServerUpdatedAt,
+			IsDeleted:       resp.Items[i].IsDeleted,
 		}
 		dbItem, err := c.storage.GetVaultItem(ctx, item.ID)
 		if err != nil {
@@ -176,6 +177,7 @@ func (c *Client) sendVaultItem(ctx context.Context, item vault.Item) (int64, err
 			Itype:           pb.IType(item.Type),
 			Value:           item.Value,
 			ServerUpdatedAt: item.ServerUpdatedAt,
+			IsDeleted:       item.IsDeleted,
 		},
 	})
 	if err != nil {
@@ -203,6 +205,6 @@ func (c *Client) newContextWithAuthData(ctx context.Context) (context.Context, e
 	if !c.HasToken() {
 		return ctx, pb.ErrEmptyAuthData
 	}
-	md := metadata.New(map[string]string{"token": c.credentials.token})
+	md := metadata.New(map[string]string{"token": c.credentials.Token})
 	return metadata.NewOutgoingContext(ctx, md), nil
 }

@@ -3,7 +3,6 @@ package card
 import (
 	"fmt"
 	"strings"
-	"time"
 	"unicode"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -219,7 +218,6 @@ var validateExpiredDateFn textinput.ValidateFunc = func(s string) error {
 
 func (v View) cmd() tea.Cmd {
 	v.item.Name = v.inputs[0].Value()
-	v.item.ClientUpdatedAt = time.Now().Unix()
 
 	return item.SetCmd(v.client,
 		v.item,

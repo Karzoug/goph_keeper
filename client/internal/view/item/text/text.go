@@ -3,7 +3,6 @@ package text
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -157,7 +156,6 @@ func (v View) View(body *strings.Builder, help *strings.Builder) {
 
 func (v View) cmd() tea.Cmd {
 	v.item.Name = v.inputs[0].Value()
-	v.item.ClientUpdatedAt = time.Now().Unix()
 
 	return item.SetCmd(v.client,
 		v.item, vault.Text{

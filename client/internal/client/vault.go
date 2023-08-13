@@ -3,14 +3,12 @@ package client
 import (
 	"context"
 	"errors"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"time"
 
 	"github.com/rs/xid"
 
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
-	pb "github.com/Karzoug/goph_keeper/common/grpc"
+	"github.com/Karzoug/goph_keeper/client/internal/repository/storage"
 )
 
 func (c *Client) ListVaultItemsIDName(ctx context.Context) ([]vault.IDName, error) {
@@ -29,6 +27,47 @@ func (c *Client) ListVaultItemsIDName(ctx context.Context) ([]vault.IDName, erro
 	return names, nil
 }
 
+func (c *Client) DeleteVaultItem(ctx context.Context, id string) error {
+	const op = "delete vault item"
+
+	if !c.HasLocalCredintials() {
+		return ErrUserNeedAuthentication
+	}
+
+	item, err := c.storage.GetVaultItem(ctx, id)
+	if err != nil {
+		if errors.Is(err, storage.ErrRecordNotFound) {
+			return nil
+		}
+		c.logger.Debug(op, err)
+		return ErrAppInternal
+	}
+
+	item.Name = ""
+	item.Value = nil
+	item.IsDeleted = true
+	item.ClientUpdatedAt = time.Now().UnixMicro()
+
+	if err := c.storage.SetVaultItem(ctx, item); err != nil {
+		c.logger.Debug(op, err)
+		return ErrAppInternal
+	}
+
+	t, err := c.sendVaultItem(ctx, item)
+	if err != nil {
+		c.logger.Debug(op, err)
+		return err
+	}
+
+	item.ServerUpdatedAt = t
+	if err := c.storage.SetVaultItem(ctx, item); err != nil {
+		c.logger.Debug(op, err)
+		return ErrAppInternal
+	}
+
+	return nil
+}
+
 func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, value any) error {
 	const op = "client: encrypt and set vault item"
 
@@ -39,8 +78,9 @@ func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, va
 	if len(item.ID) == 0 {
 		item.ID = xid.New().String()
 	}
+	item.ClientUpdatedAt = time.Now().UnixMicro()
 
-	if err := item.EncryptAndSetValue(value, c.credentials.encrKey); err != nil {
+	if err := item.EncryptAndSetValue(value, c.credentials.EncrKey); err != nil {
 		c.logger.Debug(op, err)
 		return ErrAppInternal
 	}
@@ -55,36 +95,13 @@ func (c *Client) EncryptAndSetVaultItem(ctx context.Context, item vault.Item, va
 		return nil
 	}
 
-	resp, err := c.grpcClient.SetVaultItem(ctx, &pb.SetVaultItemRequest{
-		Item: &pb.VaultItem{
-			Id:              item.ID,
-			Name:            item.Name,
-			Itype:           pb.IType(item.Type),
-			Value:           item.Value,
-			ServerUpdatedAt: item.ServerUpdatedAt,
-		},
-	})
+	t, err := c.sendVaultItem(ctx, item)
 	if err != nil {
-		switch {
-		case errors.Is(err, pb.ErrEmptyAuthData),
-			errors.Is(err, pb.ErrEmptyAuthData),
-			errors.Is(err, pb.ErrInvalidTokenFormat),
-			errors.Is(err, pb.ErrUserNeedAuthentication):
-			_ = c.clearToken(ctx)
-			return nil
-		case errors.Is(err, pb.ErrVaultItemConflictVersion):
-			// it's ok, next update method iteration hadle this conflict
-			return ErrConflictVersion
-		default:
-			c.logger.Debug(op, err)
-			if status.Code(err) == codes.Unavailable {
-				return ErrServerUnavailable
-			}
-			return ErrServerInternal
-		}
+		c.logger.Debug(op, err)
+		return err
 	}
 
-	item.ServerUpdatedAt = resp.ServerUpdatedAt
+	item.ServerUpdatedAt = t
 	if err := c.storage.SetVaultItem(ctx, item); err != nil {
 		c.logger.Debug(op, err)
 		return ErrAppInternal
@@ -106,7 +123,7 @@ func (c *Client) DecryptAndGetVaultItem(ctx context.Context, id string) (vault.I
 		return vault.Item{}, nil, ErrAppInternal
 	}
 
-	value, err := item.DecryptAnGetValue(c.credentials.encrKey)
+	value, err := item.DecryptAnGetValue(c.credentials.EncrKey)
 	if err != nil {
 		c.logger.Debug(op, err)
 		return vault.Item{}, nil, ErrAppInternal

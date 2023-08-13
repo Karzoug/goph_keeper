@@ -1,0 +1,2 @@
+ALTER TABLE vaults
+ADD is_deleted INTEGER NOT NULL DEFAULT 0;

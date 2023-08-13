@@ -21,7 +21,7 @@ func (s *Service) SetVaultItem(ctx context.Context, email string, item vault.Ite
 		return 0, e.Wrap(op, ErrVaultItemValueTooBig)
 	}
 
-	item.ClientUpdatedAt = time.Now().Unix()
+	item.ClientUpdatedAt = time.Now().UnixMicro()
 
 	err := s.storage.SetVaultItem(ctx, email, item)
 	if err != nil {

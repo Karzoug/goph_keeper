@@ -16,11 +16,11 @@ func (s *storage) SetVaultItem(ctx context.Context, email string, item vault.Ite
 	const op = "postgres: set vault item"
 
 	res, err := s.db.Exec(ctx,
-		`INSERT INTO vaults(id,email,name,type,value,updated_at) VALUES($1, $2, $3, $4, $5, $6)
+		`INSERT INTO vaults(id,email,name,type,value,updated_at,is_deleted) VALUES($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT(id,email) 
-		DO UPDATE SET name = excluded.name, type = excluded.type, value=excluded.value, updated_at=excluded.updated_at
-		WHERE vaults.updated_at=$7;`,
-		item.ID, email, item.Name, item.Type, item.Value, item.ClientUpdatedAt, item.ServerUpdatedAt)
+		DO UPDATE SET name = excluded.name, type = excluded.type, value=excluded.value, updated_at=excluded.updated_at, is_deleted=excluded.is_deleted
+		WHERE vaults.updated_at=$8;`,
+		item.ID, email, item.Name, item.Type, item.Value, item.ClientUpdatedAt, item.IsDeleted, item.ServerUpdatedAt)
 	if err != nil {
 		return e.Wrap(op, err)
 	}
@@ -73,10 +73,10 @@ func (s *storage) ListVaultItems(ctx context.Context, email string, since int64)
 	)
 	if since != 0 {
 		rows, err = s.db.Query(ctx,
-			`SELECT id, name, type, value, updated_at FROM vaults WHERE email = $1 AND updated_at > $2;`, email, since)
+			`SELECT id, name, type, value, updated_at, is_deleted FROM vaults WHERE email = $1 AND updated_at > $2;`, email, since)
 	} else {
 		rows, err = s.db.Query(ctx,
-			`SELECT id, name, type, value, updated_at FROM vaults WHERE email = $1`, email)
+			`SELECT id, name, type, value, updated_at, is_deleted FROM vaults WHERE email = $1`, email)
 	}
 
 	if err != nil {
@@ -86,7 +86,7 @@ func (s *storage) ListVaultItems(ctx context.Context, email string, since int64)
 
 	res, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (vault.Item, error) {
 		var item vault.Item
-		err = rows.Scan(&item.ID, &item.Name, &item.Type, &item.Value, &item.ServerUpdatedAt)
+		err = rows.Scan(&item.ID, &item.Name, &item.Type, &item.Value, &item.ServerUpdatedAt, &item.IsDeleted)
 		return item, err
 	})
 	if err != nil {

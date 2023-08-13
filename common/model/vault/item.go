@@ -18,4 +18,5 @@ type Item struct {
 	Value           []byte
 	ServerUpdatedAt int64
 	ClientUpdatedAt int64
+	IsDeleted       bool
 }
