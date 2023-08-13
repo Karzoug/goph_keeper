@@ -1,5 +1,5 @@
-github.com/Karzoug/goph_keeper/common v0.7.0 h1:ST+mi5mLe6YcjST9lkHgb3nv/3kKtRkkeqTL+mbPNC0=
-github.com/Karzoug/goph_keeper/common v0.7.0/go.mod h1:bX2oW179zbgsPHd9JnuEUYfaE+9KSSzIz4k3/ApjIkU=
+github.com/Karzoug/goph_keeper/common v0.7.1 h1:lIM93VgdvjwfYuq65j45YPY/aeYkXALkmXrsIyElprE=
+github.com/Karzoug/goph_keeper/common v0.7.1/go.mod h1:LkSZ9pS4W6GdXG8ARiFkCgzugvJbfoLNdvdrThzUKII=
 github.com/Karzoug/goph_keeper/pkg v0.4.0 h1:ZQnMv8gLTfL3hxmxVc/gUt3ZT69oYGj4p3QMfG+d+Q8=
 github.com/Karzoug/goph_keeper/pkg v0.4.0/go.mod h1:DXUAGvjNBudmXwmAYrmEfqB5sULFI4/vRBmr4BZoZzg=
 github.com/bsm/ginkgo/v2 v2.7.0 h1:ItPMPH90RbmZJt5GtkcNvIRuGEdwlBItdNVoyzaNQao=

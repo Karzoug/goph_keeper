@@ -3,7 +3,7 @@ module github.com/Karzoug/goph_keeper/client
 go 1.21
 
 require (
-	github.com/Karzoug/goph_keeper/common v0.7.0
+	github.com/Karzoug/goph_keeper/common v0.7.1
 	github.com/Karzoug/goph_keeper/pkg v0.4.0
 )
 
