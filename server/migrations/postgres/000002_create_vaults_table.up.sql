@@ -4,5 +4,5 @@ CREATE TABLE IF NOT EXISTS vaults (
 	name TEXT NOT NULL,
 	type INTEGER,
 	value bytea,
-	updated_at INTEGER,
+	updated_at bigint,
 	PRIMARY KEY(id,email));
