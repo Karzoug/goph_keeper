@@ -12,7 +12,7 @@ import (
 	"github.com/Karzoug/goph_keeper/server/internal/repository/storage"
 )
 
-const lastUpdateCacheTTL = 24 * time.Hour
+const lastUpdateCacheTTL = 30 * time.Minute
 
 func (s *Service) SetVaultItem(ctx context.Context, email string, item vault.Item) (int64, error) {
 	const op = "service: set vault item"
@@ -30,6 +30,11 @@ func (s *Service) SetVaultItem(ctx context.Context, email string, item vault.Ite
 		}
 		return 0, e.Wrap(op, err)
 	}
+
+	if err := s.caches.lastUpdate.Set(ctx, email, strconv.FormatInt(item.ClientUpdatedAt, 10), lastUpdateCacheTTL); err != nil {
+		s.logger.Warn(op, e.Wrap(op, err))
+	}
+
 	return item.ClientUpdatedAt, nil
 }
 
@@ -70,8 +75,7 @@ func (s *Service) ListVaultItems(ctx context.Context, email string, since int64)
 	if oTime == 0 {
 		return items, nil
 	}
-	err = s.caches.lastUpdate.Set(ctx, email, strconv.FormatInt(oTime, 10), lastUpdateCacheTTL)
-	if err != nil {
+	if err := s.caches.lastUpdate.Set(ctx, email, strconv.FormatInt(oTime, 10), lastUpdateCacheTTL); err != nil {
 		s.logger.Warn(op, e.Wrap(op, err))
 	}
 	return items, nil
