@@ -33,5 +33,6 @@ jobs:
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           project_path: "./client/cmd/"
+          extra_files: ./client/config/config.yaml
           binary_name: "client"
           ldflags: -X "main.buildVersion=${{ env.APP_VERSION }}" -X "main.buildDate=${{ env.BUILD_TIME }}"

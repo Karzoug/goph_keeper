@@ -21,14 +21,12 @@ var (
 func main() {
 	cfg, err := buildConfig()
 	if err != nil {
-		log.Fatal("parse config error: ", err)
+		log.Fatal("parse config error:\n", err)
 	}
-
-	cfg.Version = buildVersion
 
 	logger, err := buildLogger(envMode)
 	if err != nil {
-		log.Fatal("build logger error: ", err)
+		log.Fatal("build logger error:\n", err)
 	}
 
 	logger.Debug(

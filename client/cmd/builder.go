@@ -1,29 +1,31 @@
 package main
 
 import (
-	"os"
-
 	"log/slog"
 
-	"github.com/caarlos0/env/v9"
+	"github.com/ilyakaznacheev/cleanenv"
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/Karzoug/goph_keeper/client/internal/config"
 )
 
-var logFilename = "log.log"
+var (
+	logFilename    = "log.log"
+	configFilename = "config.yaml"
+)
 
 func buildConfig() (*config.Config, error) {
 	cfg := new(config.Config)
 
-	opts := env.Options{
-		Prefix: "GOPH_KEEPER_",
+	err := cleanenv.ReadConfig(configFilename, cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	cfg.Env = envMode
 	cfg.Version = buildVersion
 
-	return cfg, env.ParseWithOptions(cfg, opts)
+	return cfg, nil
 }
 
 func buildLogger(env config.EnvType) (*slog.Logger, error) {
