@@ -89,8 +89,7 @@ func (s *storage) GetCredentials(ctx context.Context) (model.Credentials, error)
 		return creds, e.Wrap(op, err)
 	}
 
-	err = e.Wrap(op, tx.Commit())
-	return creds, nil
+	return creds, e.Wrap(op, tx.Commit())
 }
 func (s *storage) DeleteCredentials(ctx context.Context) error {
 	const op = "sqlite: delete credentials"

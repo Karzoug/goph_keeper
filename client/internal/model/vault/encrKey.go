@@ -48,7 +48,5 @@ func (k *EncryptionKey) UnmarshalBinary(data []byte) error {
 }
 
 func (k EncryptionKey) MarshalBinary() (data []byte, err error) {
-	const op = "encryption key to bytes"
-
 	return k.Raw.Encode(), nil
 }
