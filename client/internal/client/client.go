@@ -14,7 +14,10 @@ import (
 	gcreds "google.golang.org/grpc/credentials"
 
 	"github.com/Karzoug/goph_keeper/client/internal/config"
+	"github.com/Karzoug/goph_keeper/client/internal/model"
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
+	"github.com/Karzoug/goph_keeper/client/internal/repository/storage"
+	"github.com/Karzoug/goph_keeper/client/internal/repository/storage/native"
 	sqlite "github.com/Karzoug/goph_keeper/client/internal/repository/storage/sqllite"
 	pb "github.com/Karzoug/goph_keeper/common/grpc"
 	"github.com/Karzoug/goph_keeper/pkg/e"
@@ -24,14 +27,12 @@ const createClientTimeout = 5 * time.Second
 
 type clientCredentialsStorage interface {
 	// SetCredentials adds or updates email, token and encryption key.
-	SetCredentials(ctx context.Context, email, token, encrKey string) error
+	SetCredentials(context.Context, model.Credentials) error
 	//GetCredentials returns email and encryption key, or an error if they are not found.
 	// It can also return a token if it exists.
-	GetCredentials(context.Context) (email, token, encrKey string, err error)
+	GetCredentials(context.Context) (model.Credentials, error)
 	// DeleteCredentials deletes all credentials: email, token and encryption key.
 	DeleteCredentials(context.Context) error
-	// Close closes storage if applicable.
-	Close() error
 }
 
 type clientStorage interface {
@@ -76,11 +77,19 @@ func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	if err != nil {
 		return nil, e.Wrap(op, err)
 	}
-	c.credentialsStorage = ss // TODO: add other credentials storages
 	c.storage = ss
 
+	c.credentialsStorage = ss
+	if cfg.CredentialsStorageType != storage.Database {
+		ns, err := native.New(cfg.CredentialsStorageType)
+		if err != nil {
+			return nil, e.Wrap(op, err)
+		}
+		c.credentialsStorage = ns
+	}
+
 	if err := c.restoreCredentials(ctx); err != nil {
-		c.logger.Debug(op, err)
+		c.logger.Error(op, err)
 	}
 
 	cs, err := loadTLSCredentials(cfg.Host, cfg.CertFilename)

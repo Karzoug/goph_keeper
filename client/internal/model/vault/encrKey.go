@@ -36,12 +36,19 @@ func NewEncryptionKey(email, password []byte) (EncryptionKey, error) {
 	return EncryptionKey{Raw: encoded}, nil
 }
 
-func EncryptionKeyFromString(s string) (EncryptionKey, error) {
-	const op = "encryption key from string"
+func (k *EncryptionKey) UnmarshalBinary(data []byte) error {
+	const op = "encryption key from bytes"
 
-	raw, err := argon2.Decode([]byte(s))
+	raw, err := argon2.Decode(data)
 	if err != nil {
-		return EncryptionKey{}, e.Wrap(op, err)
+		return e.Wrap(op, err)
 	}
-	return EncryptionKey{Raw: raw}, nil
+	k.Raw = raw
+	return nil
+}
+
+func (k EncryptionKey) MarshalBinary() (data []byte, err error) {
+	const op = "encryption key to bytes"
+
+	return k.Raw.Encode(), nil
 }

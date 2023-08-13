@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/Karzoug/goph_keeper/client/internal/model"
 	"github.com/Karzoug/goph_keeper/client/internal/model/auth"
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
 	"github.com/Karzoug/goph_keeper/client/internal/repository/storage"
@@ -12,20 +13,18 @@ import (
 )
 
 type credentials struct {
-	email    string
-	authHash auth.Hash
-	token    string
-	encrKey  vault.EncryptionKey
+	model.Credentials
+	AuthHash auth.Hash
 }
 
 // HasLocalCredintials indicates whether credentials for the application to work locally.
 func (c *Client) HasLocalCredintials() bool {
-	return len(c.credentials.email) > 0 && c.credentials.encrKey.Hash != nil
+	return len(c.credentials.Email) > 0 && c.credentials.EncrKey.Hash != nil
 }
 
 // HasToken indicates whether token for the application to work online.
 func (c *Client) HasToken() bool {
-	return len(c.credentials.token) > 0
+	return len(c.credentials.Token) > 0
 }
 
 // buildPasswordHashes builds auth hash and encryption key from given email and password.
@@ -77,12 +76,14 @@ func (c *Client) setCredentialsForOwnerOnly(ctx context.Context, email string, h
 	}
 
 	c.credentials = credentials{
-		email:    email,
-		encrKey:  encrKey,
-		authHash: hash,
+		Credentials: model.Credentials{
+			Email:   email,
+			EncrKey: encrKey,
+		},
+		AuthHash: hash,
 	}
 
-	if err := c.credentialsStorage.SetCredentials(ctx, email, "", string(encrKey.Encode())); err != nil {
+	if err := c.credentialsStorage.SetCredentials(ctx, c.credentials.Credentials); err != nil {
 		return e.Wrap(op, err)
 	}
 
@@ -116,12 +117,14 @@ func (c *Client) setCredentialsForced(ctx context.Context, email string, hash au
 	}
 
 	c.credentials = credentials{
-		email:    email,
-		encrKey:  encrKey,
-		authHash: hash,
+		Credentials: model.Credentials{
+			Email:   email,
+			EncrKey: encrKey,
+		},
+		AuthHash: hash,
 	}
 
-	if err := c.credentialsStorage.SetCredentials(ctx, email, "", string(encrKey.Encode())); err != nil {
+	if err := c.credentialsStorage.SetCredentials(ctx, c.credentials.Credentials); err != nil {
 		return e.Wrap(op, err)
 	}
 
@@ -131,24 +134,23 @@ func (c *Client) setCredentialsForced(ctx context.Context, email string, hash au
 func (c *Client) setToken(ctx context.Context, token string) error {
 	const op = "set token"
 
-	c.credentials.authHash = nil
-	c.credentials.token = token
+	c.credentials.AuthHash = nil
+	c.credentials.Token = token
 
 	if !c.HasLocalCredintials() {
 		return e.Wrap(op, ErrUserNeedAuthentication)
 	}
 
-	return e.Wrap(op,
-		c.credentialsStorage.SetCredentials(ctx, c.credentials.email, token, string(c.credentials.encrKey.Encode())))
+	return e.Wrap(op, c.credentialsStorage.SetCredentials(ctx, c.credentials.Credentials))
 }
 
 func (c *Client) clearToken(ctx context.Context) error {
 	const op = "clear token"
 
-	c.credentials.token = ""
+	c.credentials.Token = ""
 
 	return e.Wrap(op,
-		c.credentialsStorage.SetCredentials(ctx, c.credentials.email, "", string(c.credentials.encrKey.Encode())))
+		c.credentialsStorage.SetCredentials(ctx, c.credentials.Credentials))
 }
 
 func (c *Client) clearCredentials(ctx context.Context) error {
@@ -163,22 +165,20 @@ func (c *Client) clearCredentials(ctx context.Context) error {
 func (c *Client) restoreCredentials(ctx context.Context) error {
 	const op = "restore credentials"
 
-	email, token, encrKeyString, err := c.credentialsStorage.GetCredentials(ctx)
+	creds, err := c.credentialsStorage.GetCredentials(ctx)
 	if err != nil {
 		if errors.Is(err, storage.ErrRecordNotFound) {
 			return nil
 		}
 		return e.Wrap(op, err)
 	}
-	encrKey, err := vault.EncryptionKeyFromString(encrKeyString)
-	if err != nil {
-		return e.Wrap(op, err)
-	}
+	// encrKey, err := vault.EncryptionKeyFromString(encrKeyString)
+	// if err != nil {
+	// 	return e.Wrap(op, err)
+	// }
 
 	c.credentials = credentials{
-		email:   email,
-		token:   token,
-		encrKey: encrKey,
+		Credentials: creds,
 	}
 	return nil
 }

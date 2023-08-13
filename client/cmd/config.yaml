@@ -1,3 +1,0 @@
-host: "localhost"
-port: "8080"
-cert_filename: "cert.pem"

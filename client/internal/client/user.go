@@ -106,7 +106,7 @@ func (c *Client) Login(ctx context.Context, email string, password []byte) error
 			return ErrUserInvalidPassword
 		case errors.Is(err, pb.ErrUserEmailNotVerified):
 			if err := c.setCredentialsForced(ctx, email, hash, encrKey); err != nil {
-				c.logger.Debug(op, err)
+				c.logger.Error(op, err)
 				return ErrAppInternal
 			}
 			return ErrUserEmailNotVerified
@@ -117,9 +117,11 @@ func (c *Client) Login(ctx context.Context, email string, password []byte) error
 			// problems with grpc,
 			// but if this is the owner of the vault, then they can try to work offline
 			if err := c.setCredentialsForOwnerOnly(ctx, email, hash, encrKey); err != nil {
-				c.logger.Debug(op, err)
 				if errors.Is(err, ErrUserNeedAuthentication) {
+					c.logger.Debug(op, err)
 					return ErrUserNeedAuthentication
+				} else {
+					c.logger.Error(op, err)
 				}
 				return ErrAppInternal
 			}
@@ -132,11 +134,11 @@ func (c *Client) Login(ctx context.Context, email string, password []byte) error
 	}
 
 	if err := c.setCredentialsForced(ctx, email, hash, encrKey); err != nil {
-		c.logger.Debug(op, err)
+		c.logger.Error(op, err)
 		return ErrAppInternal
 	}
 	if err := c.setToken(ctx, resp.Token); err != nil {
-		c.logger.Debug(op, err)
+		c.logger.Error(op, err)
 		return ErrAppInternal
 	}
 	return nil
@@ -147,14 +149,14 @@ func (c *Client) Login(ctx context.Context, email string, password []byte) error
 func (c *Client) VerifyEmail(ctx context.Context, code string) error {
 	const op = "verify email"
 
-	if len(c.credentials.email) == 0 ||
-		c.credentials.authHash == nil {
+	if len(c.credentials.Email) == 0 ||
+		c.credentials.AuthHash == nil {
 		return ErrUserNeedAuthentication
 	}
 
 	resp, err := c.grpcClient.Login(ctx, &pb.LoginRequest{
-		Email:     c.credentials.email,
-		Hash:      c.credentials.authHash,
+		Email:     c.credentials.Email,
+		Hash:      c.credentials.AuthHash,
 		EmailCode: code,
 	})
 	if err != nil {
@@ -177,7 +179,7 @@ func (c *Client) VerifyEmail(ctx context.Context, code string) error {
 	}
 
 	if err := c.setToken(ctx, resp.Token); err != nil {
-		c.logger.Debug(op, err)
+		c.logger.Error(op, err)
 		return ErrAppInternal
 	}
 	return nil
@@ -187,7 +189,7 @@ func (c *Client) Logout(ctx context.Context) error {
 	const op = "logout user"
 
 	if err := c.clearCredentials(ctx); err != nil {
-		c.logger.Debug(op, err)
+		c.logger.Error(op, err)
 		return ErrAppInternal
 	}
 
