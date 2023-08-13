@@ -45,10 +45,15 @@ func Run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	}
 	logger.Info("app run: smtp client created")
 
-	opts, err := buildServiceOptions(cfg.Service)
+	opts, closeFns, err := buildServiceOptions(cfg.Service)
 	if err != nil {
 		return e.Wrap(op, err)
 	}
+	defer func() {
+		for _, fn := range closeFns {
+			fn()
+		}
+	}()
 	opts = append(opts, service.WithSLogger(logger))
 
 	service, err := service.New(cfg.Service, serviceStorage, rtaskClient, smtpClient, opts...)
@@ -99,27 +104,30 @@ func buildServiceStorage(ctx context.Context, cfg storage.Config) (service.Stora
 	}
 }
 
-func buildServiceOptions(cfg scfg.Config) ([]service.Option, error) {
+func buildServiceOptions(cfg scfg.Config) ([]service.Option, []func() error, error) {
 	opts := make([]service.Option, 0)
+	closeFns := make([]func() error, 0)
 
 	if len(cfg.AuthCache.URI) != 0 {
 		ac, err := buildServiceCache(cfg.AuthCache)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		} else {
 			opts = append(opts, service.WithAuthCache(ac))
+			closeFns = append(closeFns, ac.Close)
 		}
 	}
 	if len(cfg.MailCache.URI) != 0 {
 		mc, err := buildServiceCache(cfg.MailCache)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		} else {
 			opts = append(opts, service.WithMailCache(mc))
+			closeFns = append(closeFns, mc.Close)
 		}
 	}
 
-	return opts, nil
+	return opts, closeFns, nil
 }
 
 func buildServiceCache(cfg storage.Config) (service.KvStorage, error) {
