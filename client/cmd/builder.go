@@ -31,19 +31,21 @@ func buildConfig() (*config.Config, error) {
 func buildLogger(env config.EnvType) (*slog.Logger, error) {
 	var log *slog.Logger
 
+	w := &lumberjack.Logger{
+		Filename:   logFilename,
+		MaxSize:    5, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28, //days
+	}
+
 	switch env {
 	case config.EnvDevelopment:
 		log = slog.New(
-			slog.NewJSONHandler(&lumberjack.Logger{
-				Filename:   logFilename,
-				MaxSize:    5, // megabytes
-				MaxBackups: 3,
-				MaxAge:     28, //days
-			}, &slog.HandlerOptions{Level: slog.LevelDebug}),
+			slog.NewJSONHandler(w, &slog.HandlerOptions{Level: slog.LevelDebug}),
 		)
 	default:
 		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+			slog.NewJSONHandler(w, &slog.HandlerOptions{Level: slog.LevelInfo}),
 		)
 	}
 
