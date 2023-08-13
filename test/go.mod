@@ -1,8 +1,11 @@
 module github.com/Karzoug/goph_keeper/test
 
-go 1.20
+go 1.21
+
+toolchain go1.21.0
 
 require (
+	github.com/Karzoug/goph_keeper/common v0.7.1
 	github.com/buger/jsonparser v1.1.1
 	github.com/pioz/faker v1.7.3
 	github.com/rs/xid v1.5.0
