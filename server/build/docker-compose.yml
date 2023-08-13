@@ -5,7 +5,7 @@ services:
     depends_on:
       - redis 
       - migrate
-      - mailhog
+      - mailpit
     build:
       context: ./../
       dockerfile: ./build/server.Dockerfile
@@ -49,12 +49,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-  mailhog:
-    image: mailhog/mailhog
+  mailpit:
+    image: axllent/mailpit
     ports:
       - '1025:1025'
       - '8025:8025'
-    restart: always
+    restart: unless-stopped
 
 volumes:
   postgres-docker:
