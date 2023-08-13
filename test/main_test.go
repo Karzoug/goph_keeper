@@ -35,6 +35,10 @@ func TestVault(t *testing.T) {
 	suite.Run(t, new(VaultSuite))
 }
 
+func TestSyncVault(t *testing.T) {
+	suite.Run(t, new(SyncVaultSuite))
+}
+
 func newContextWithAuthData(ctx context.Context, token string) context.Context {
 	md := metadata.New(map[string]string{"token": token})
 	return metadata.NewOutgoingContext(ctx, md)
