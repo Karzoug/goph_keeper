@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -31,39 +29,7 @@ func (s *storage) SetVaultItem(ctx context.Context, email string, item vault.Ite
 
 	return nil
 }
-func (s *storage) LastUpdateVault(ctx context.Context, email string) (time.Time, error) {
-	const op = "postgres: last update vault"
 
-	var t time.Time
-	err := s.db.QueryRow(ctx,
-		`SELECT updated_at FROM vaults WHERE email = $1 ORDER BY updated_at DESC LIMIT 1;`, email).
-		Scan(&t)
-
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return t, e.Wrap(op, serr.ErrRecordNotFound)
-		}
-		return t, e.Wrap(op, err)
-	}
-
-	return t, nil
-}
-
-func (s *storage) DeleteVaultItem(ctx context.Context, email string, id string) error {
-	const op = "postgres: delete vault item"
-
-	res, err := s.db.Exec(ctx,
-		`DELETE FROM vaults WHERE id = $1 AND email = $2;`, id, email)
-	if err != nil {
-		return e.Wrap(op, err)
-	}
-
-	if res.RowsAffected() == 0 { // driver specific
-		return e.Wrap(op, serr.ErrNoRecordsAffected)
-	}
-
-	return nil
-}
 func (s *storage) ListVaultItems(ctx context.Context, email string, since int64) ([]vault.Item, error) {
 	const op = "postgres: list vault items"
 

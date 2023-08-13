@@ -3,7 +3,6 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/Karzoug/goph_keeper/common/model/vault"
 	"github.com/Karzoug/goph_keeper/pkg/e"
@@ -33,43 +32,7 @@ func (s *storage) SetVaultItem(ctx context.Context, email string, item vault.Ite
 
 	return nil
 }
-func (s *storage) LastUpdateVault(ctx context.Context, email string) (time.Time, error) {
-	const op = "sqlite: last update vault"
 
-	var t time.Time
-	err := s.db.QueryRowContext(ctx,
-		`SELECT updated_at FROM vaults WHERE email = ? ORDER BY updated_at DESC LIMIT 1;`, email).
-		Scan(&t)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return t, e.Wrap(op, serr.ErrRecordNotFound)
-		}
-		return t, e.Wrap(op, err)
-	}
-
-	return t, nil
-}
-
-func (s *storage) DeleteVaultItem(ctx context.Context, email string, id string) error {
-	const op = "sqlite: delete vault item"
-
-	res, err := s.db.ExecContext(ctx,
-		`DELETE FROM vaults WHERE id = ? AND email = ?;`, id, email)
-	if err != nil {
-		return e.Wrap(op, err)
-	}
-
-	count, err := res.RowsAffected() // driver specific
-	if err != nil {
-		return e.Wrap(op, err)
-	}
-	if count == 0 {
-		return e.Wrap(op, serr.ErrNoRecordsAffected)
-	}
-
-	return nil
-}
 func (s *storage) ListVaultItems(ctx context.Context, email string, since int64) ([]vault.Item, error) {
 	const op = "sqlite: list vault items"
 
