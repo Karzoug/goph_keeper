@@ -10,6 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/Karzoug/goph_keeper/pkg/e"
+	"github.com/Karzoug/goph_keeper/pkg/logger/slog/sl"
 	"github.com/Karzoug/goph_keeper/server/internal/config"
 	scfg "github.com/Karzoug/goph_keeper/server/internal/config/service"
 	"github.com/Karzoug/goph_keeper/server/internal/config/storage"
@@ -51,7 +52,9 @@ func Run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	}
 	defer func() {
 		for _, fn := range closeFns {
-			fn()
+			if err := fn(); err != nil {
+				logger.Error("close before app stop failed", sl.Error(err))
+			}
 		}
 	}()
 	opts = append(opts, service.WithSLogger(logger))
