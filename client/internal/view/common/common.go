@@ -4,73 +4,66 @@ import (
 	"fmt"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/gdamore/tcell/v2"
 )
 
-var (
-	FocusedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	BlurredStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	CursorStyle  = FocusedStyle.Copy()
-	NoStyle      = lipgloss.NewStyle()
-	HelpStyle    = BlurredStyle.Copy()
+type KeyHandlerFnc func(event *tcell.EventKey) *tcell.EventKey
 
-	FocusedButton = FocusedStyle.Copy().Render("[ Submit ]")
-	BlurredButton = fmt.Sprintf("[ %s ]", BlurredStyle.Render("Submit"))
-)
+type Help string
 
-const StandartTimeout = 3 * time.Second // used for most view cmds
+type Msg struct {
+	Time time.Time
+	msg  string
+}
+
+func NewMsg(msg string) Msg {
+	return Msg{
+		Time: time.Now(),
+		msg:  msg,
+	}
+}
+
+func (msg Msg) String() string {
+	return fmt.Sprintf("%s %s", msg.Time.Format(time.TimeOnly), msg.msg)
+}
+
+type ViewType string
+
+func (vt ViewType) String() string {
+	return string(vt)
+}
+
+type ToViewMsg struct {
+	ViewType ViewType
+	Value    any
+}
+
+type ErrMsg struct {
+	Time time.Time
+	error
+}
+
+func NewErrMsg(err error) ErrMsg {
+	return ErrMsg{
+		Time:  time.Now(),
+		error: err,
+	}
+}
+
+func (msg ErrMsg) Error() string {
+	return fmt.Sprintf("%s %s", msg.Time.Format(time.TimeOnly), msg.error)
+}
 
 const (
-	Login ViewType = iota
-	Register
-	EmailVerification
-	ListItems
-	Item // transitional view type, only to switch to another view
-	ChooseItemType
-	Password
-	Card
-	Text
-	Binary
+	Auth              ViewType = "Auth"
+	EmailVerification ViewType = "EmailVerification"
+	ListItems         ViewType = "ListItems"
+	Item              ViewType = "Item" // transitional view type, only to switch to another view
+	ChooseItemType    ViewType = "ChooseItemType"
+	Password          ViewType = "Password"
+	Card              ViewType = "Card"
+	Text              ViewType = "Text"
+	Binary            ViewType = "Binary"
 )
 
-type (
-	ViewType int8
-	MsgMsg   struct {
-		Time time.Time
-		Msg  string
-	}
-	ErrMsg struct {
-		Time time.Time
-		Err  string
-	}
-	ToViewMsg struct {
-		ViewType ViewType
-	}
-)
-
-func ToViewCmd(t ViewType) tea.Cmd {
-	return func() tea.Msg {
-		return ToViewMsg{
-			ViewType: t,
-		}
-	}
-}
-
-func ShowMsgCmd(msg string) tea.Cmd {
-	return func() tea.Msg {
-		return MsgMsg{
-			Msg:  msg,
-			Time: time.Now(),
-		}
-	}
-}
-
-func ShowErrCmd(err string) tea.Cmd {
-	return func() tea.Msg {
-		return ErrMsg{
-			Err:  err,
-			Time: time.Now(),
-		}
-	}
-}
+const StandartTimeout = 3 * time.Second

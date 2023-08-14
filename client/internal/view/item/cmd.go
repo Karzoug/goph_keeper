@@ -3,58 +3,33 @@ package item
 import (
 	"context"
 	"errors"
-	"time"
-
-	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Karzoug/goph_keeper/client/internal/client"
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
-	vc "github.com/Karzoug/goph_keeper/client/internal/view/common"
+	"github.com/Karzoug/goph_keeper/client/internal/view/common"
 )
 
-type (
-	SuccessfulSetItemMsg struct{}
-	SuccessfulGetItemMsg struct {
-		Item           vault.Item
-		DecryptedValue any
+var ErrWrongItemType = errors.New("got wrong item type")
+
+func Get(c *client.Client, id string) (vault.Item, any, error) {
+	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+	defer cancel()
+
+	item, value, err := c.DecryptAndGetVaultItem(ctx, id)
+	if err != nil {
+		return vault.Item{}, nil, err
 	}
-	ConflictVersionSetItemMsg struct{}
-)
 
-func GetCmd(c *client.Client, id string) tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
-		defer cancel()
-
-		item, value, err := c.DecryptAndGetVaultItem(ctx, id)
-		if err != nil {
-			return tea.Batch(vc.ShowErrCmd(err.Error()), vc.ToViewCmd(vc.ListItems))
-		}
-
-		return SuccessfulGetItemMsg{
-			Item:           item,
-			DecryptedValue: value,
-		}
-	}
+	return item, value, nil
 }
 
-func SetCmd(c *client.Client, item vault.Item, value any) tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
-		defer cancel()
+func Set(c *client.Client, item vault.Item, value any) error {
+	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+	defer cancel()
 
-		err := c.EncryptAndSetVaultItem(ctx, item, value)
-		if err != nil {
-			switch {
-			case errors.Is(err, client.ErrConflictVersion):
-				return ConflictVersionSetItemMsg{}
-			case errors.Is(err, client.ErrAppInternal) || errors.Is(err, client.ErrUserNeedAuthentication):
-				return vc.ErrMsg{
-					Time: time.Now(),
-					Err:  err.Error(),
-				}
-			}
-		}
-		return SuccessfulSetItemMsg{}
+	err := c.EncryptAndSetVaultItem(ctx, item, value)
+	if err != nil {
+		return err
 	}
+	return nil
 }

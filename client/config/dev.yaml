@@ -8,6 +8,6 @@ credentials_storage_type: "database"
 host: "localhost"
 port: "8080"
 # specify the filename if you want to use self-signed certificates
-cert_filename: ""
+cert_filename: "cert.pem"
 # root path for file picker, empty value means user home directory
 root_path: ""

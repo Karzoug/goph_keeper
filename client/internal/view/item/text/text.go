@@ -1,164 +1,114 @@
 package text
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 
 	"github.com/Karzoug/goph_keeper/client/internal/client"
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
-	vc "github.com/Karzoug/goph_keeper/client/internal/view/common"
+	"github.com/Karzoug/goph_keeper/client/internal/view/common"
 	"github.com/Karzoug/goph_keeper/client/internal/view/item"
 )
 
 type View struct {
-	client     *client.Client
-	item       vault.Item
-	isNewItem  bool
-	focusIndex int
-	inputs     []textinput.Model
+	Frame *tview.Frame
+	form  *tview.Form
+
+	item  vault.Item
+	value vault.Text
+
+	client      *client.Client
+	msgCh       chan<- any
+	appUpdateFn func(func()) *tview.Application
 }
 
-func New(c *client.Client, item vault.Item, vt vault.Text, isNewItem bool) View {
-	m := View{
-		client:    c,
-		inputs:    make([]textinput.Model, 2),
-		item:      item,
-		isNewItem: isNewItem,
+func New(c *client.Client, msgCh chan<- any, appUpdateFn func(func()) *tview.Application) View {
+	v := View{
+		client:      c,
+		msgCh:       msgCh,
+		appUpdateFn: appUpdateFn,
 	}
 
-	var t textinput.Model
-	for i := range m.inputs {
-		t = textinput.New()
-		t.Cursor.Style = vc.CursorStyle
-		t.CharLimit = 32
+	frame := tview.NewFrame(nil).
+		AddText("Save text:", true, tview.AlignLeft, tcell.ColorWhite)
 
-		switch i {
-		case 0:
-			if !isNewItem {
-				t.SetValue(item.Name)
-			}
-			t.Placeholder = "Name"
-			t.Focus()
-			t.PromptStyle = vc.FocusedStyle
-			t.TextStyle = vc.FocusedStyle
-			t.CharLimit = 128
-		case 1:
-			if !isNewItem {
-				t.SetValue(vt.Text)
-			}
-			t.Placeholder = "Text"
-			t.PromptStyle = vc.NoStyle
-			t.TextStyle = vc.NoStyle
-			t.Width = 80
-			t.CharLimit = 1000
-		}
+	v.Frame = frame
 
-		m.inputs[i] = t
-	}
-
-	return m
+	return v
 }
 
-func (v *View) Update(msg tea.Msg) tea.Cmd {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch s := msg.Type; s { //nolint:exhaustive
-		case tea.KeyEsc:
-			for i := 0; i < len(v.inputs); i++ {
-				v.inputs[i].Reset()
-			}
-			return vc.ToViewCmd(vc.ListItems)
-		case tea.KeyTab, tea.KeyShiftTab, tea.KeyEnter, tea.KeyUp, tea.KeyDown:
-			// Did the user press enter while the submit button was focused?
-			if s == tea.KeyEnter && v.focusIndex == len(v.inputs) {
-				return v.cmd()
-			}
+func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
+	form := tview.NewForm()
+	form.SetBorderPadding(1, 1, 0, 1)
+	form.AddInputField("Name", v.item.Name, 60, nil, func(name string) {
+		v.item.Name = name
+	})
+	form.AddTextArea("Text", v.value.Text, 60, 10, 0, func(text string) {
+		v.value.Text = text
+	})
+	form.AddButton("Save", func() {
+		form.ClearButtons()
+		go v.saveCmd()
+	})
+	v.form = form
+	v.Frame.SetPrimitive(form)
 
-			if s == tea.KeyUp || s == tea.KeyShiftTab {
-				v.focusIndex--
-			} else {
-				v.focusIndex++
-			}
-
-			if v.focusIndex > len(v.inputs) {
-				v.focusIndex = 0
-			} else if v.focusIndex < 0 {
-				v.focusIndex = len(v.inputs)
-			}
-
-			cmds := make([]tea.Cmd, len(v.inputs))
-			for i := 0; i <= len(v.inputs)-1; i++ {
-				if i == v.focusIndex {
-					// Set focused state
-					cmds[i] = v.inputs[i].Focus()
-					v.inputs[i].PromptStyle = vc.FocusedStyle
-					v.inputs[i].TextStyle = vc.FocusedStyle
-					continue
-				}
-				// Remove focused state
-				v.inputs[i].Blur()
-				v.inputs[i].PromptStyle = vc.NoStyle
-				v.inputs[i].TextStyle = vc.NoStyle
-			}
-
-			return tea.Batch(cmds...)
-		}
-	case item.SuccessfulSetItemMsg:
-		return tea.Batch(vc.ToViewCmd(vc.ListItems),
-			vc.ShowMsgCmd("Saved!"))
-	case item.ConflictVersionSetItemMsg:
-		return tea.Batch(vc.ToViewCmd(vc.ListItems),
-			vc.ShowMsgCmd("Saved!"),
-			vc.ShowErrCmd(client.ErrConflictVersion.Error()))
-	}
-
-	// Handle character input and blinking
-	cmd := v.updateTextViewInputs(msg)
-
-	return cmd
+	return v.keyHandler, "tab next • esc back • "
 }
 
-func (v *View) updateTextViewInputs(msg tea.Msg) tea.Cmd {
-	cmds := make([]tea.Cmd, len(v.inputs))
+func (v *View) Update(vitem vault.Item, value any) error {
+	v.item = vitem
 
-	for i := range v.inputs {
-		v.inputs[i], cmds[i] = v.inputs[i].Update(msg)
+	if value == nil {
+		return nil
 	}
+	txt, ok := value.(vault.Text)
+	if !ok {
+		return common.NewErrMsg(item.ErrWrongItemType)
+	}
+	v.value = txt
 
-	return tea.Batch(cmds...)
+	return nil
 }
 
-func (v View) View(body *strings.Builder, help *strings.Builder) {
-	if v.isNewItem {
-		body.WriteString("\n\nAdd new text:\n")
-	} else {
-		body.WriteString("\n\nEdit text:\n")
-	}
-
-	for i := range v.inputs {
-		body.WriteString(v.inputs[i].View())
-		if i < len(v.inputs)-1 {
-			body.WriteRune('\n')
-		}
-	}
-
-	button := &vc.BlurredButton
-	if v.focusIndex == len(v.inputs) {
-		button = &vc.FocusedButton
-	}
-	fmt.Fprintf(body, "\n\n%s", *button)
-
-	help.WriteString("tab next • shift+tab prev • esc back • ")
-}
-
-func (v View) cmd() tea.Cmd {
-	v.item.Name = v.inputs[0].Value()
-
-	return item.SetCmd(v.client,
-		v.item, vault.Text{
-			Text: v.inputs[1].Value(),
+func (v *View) saveCmd() {
+	err := item.Set(v.client, v.item, v.value)
+	if err != nil {
+		v.msgCh <- common.NewErrMsg(err)
+		v.appUpdateFn(func() {
+			v.form.AddButton("Save", func() {
+				v.form.ClearButtons()
+				go v.saveCmd()
+			})
 		})
+		return
+	}
+
+	// clear before go to list items
+	v.value = vault.Text{}
+	v.appUpdateFn(func() {
+		v.Frame.SetPrimitive(nil)
+		v.form = nil
+	})
+
+	v.msgCh <- common.NewMsg("Text saved!")
+	v.msgCh <- common.ToViewMsg{
+		ViewType: common.ListItems,
+	}
+}
+
+func (v *View) keyHandler(event *tcell.EventKey) *tcell.EventKey {
+	switch event.Key() {
+	case tcell.KeyEsc:
+		v.value = vault.Text{}
+		v.Frame.SetPrimitive(nil)
+		v.form = nil
+		go func() {
+			v.msgCh <- common.ToViewMsg{
+				ViewType: common.ListItems,
+			}
+		}()
+	}
+
+	return event
 }

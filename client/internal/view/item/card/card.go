@@ -1,230 +1,116 @@
 package card
 
 import (
-	"fmt"
-	"strings"
-	"unicode"
-
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 
 	"github.com/Karzoug/goph_keeper/client/internal/client"
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
-	vc "github.com/Karzoug/goph_keeper/client/internal/view/common"
+	"github.com/Karzoug/goph_keeper/client/internal/view/common"
 	"github.com/Karzoug/goph_keeper/client/internal/view/item"
 )
 
 type View struct {
-	client     *client.Client
-	item       vault.Item
-	isNewItem  bool
-	focusIndex int
-	inputs     []textinput.Model
+	Frame *tview.Frame
+	form  *tview.Form
+
+	item  vault.Item
+	value vault.Card
+
+	client      *client.Client
+	msgCh       chan<- any
+	appUpdateFn func(func()) *tview.Application
 }
 
-func New(c *client.Client, item vault.Item, card vault.Card, isNewItem bool) View {
+func New(c *client.Client, msgCh chan<- any, appUpdateFn func(func()) *tview.Application) View {
 	v := View{
-		client:    c,
-		item:      item,
-		inputs:    make([]textinput.Model, 5),
-		isNewItem: isNewItem,
+		client:      c,
+		msgCh:       msgCh,
+		appUpdateFn: appUpdateFn,
 	}
 
-	var t textinput.Model
-	for i := range v.inputs {
-		t = textinput.New()
-		t.Cursor.Style = vc.CursorStyle
-		t.CharLimit = 32
+	frame := tview.NewFrame(nil).
+		AddText("Save password:", true, tview.AlignLeft, tcell.ColorWhite)
 
-		switch i {
-		case 0:
-			if !isNewItem {
-				t.SetValue(item.Name)
-			}
-			t.Placeholder = "Name"
-			t.Focus()
-			t.PromptStyle = vc.FocusedStyle
-			t.TextStyle = vc.FocusedStyle
-			t.CharLimit = 128
-		case 1:
-			if !isNewItem {
-				t.SetValue(card.Number)
-			}
-			t.Placeholder = "Number"
-			t.Validate = validateOnlyNumbersFn
-			t.PromptStyle = vc.NoStyle
-			t.TextStyle = vc.NoStyle
-			// For the most popular card types
-			// the maximum card number length is up to 19 digits.
-			t.CharLimit = 19
-		case 2:
-			if !isNewItem {
-				t.SetValue(card.Holder)
-			}
-			t.Placeholder = "CardHolder"
-			t.Validate = validateOnlyLettersAndSpacesFn
-			t.PromptStyle = vc.NoStyle
-			t.TextStyle = vc.NoStyle
-			// Since 2014, VISA and MasterCard are shortens maximum length
-			// for Cardholder names to 21 characters and 22 characters respectively.
-			// Set here 40, because there might be older cards with longer names.
-			t.CharLimit = 40
-		case 3:
-			if !isNewItem {
-				t.SetValue(card.Expired)
-			}
-			t.Placeholder = "Expired"
-			t.Validate = validateExpiredDateFn
-			t.PromptStyle = vc.NoStyle
-			t.TextStyle = vc.NoStyle
-			t.CharLimit = 5
-		case 4:
-			if !isNewItem {
-				t.SetValue(card.CSC)
-			}
-			t.Placeholder = "CVV/CVC"
-			t.Validate = validateOnlyNumbersFn
-			t.PromptStyle = vc.NoStyle
-			t.TextStyle = vc.NoStyle
-			// 4-digit for AMEX, 3 for all other.
-			t.CharLimit = 4
-		}
-		v.inputs[i] = t
-	}
+	v.Frame = frame
+
 	return v
 }
 
-func (v *View) Update(msg tea.Msg) tea.Cmd {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch s := msg.Type; s {
-		case tea.KeyEsc:
-			for i := 0; i < len(v.inputs); i++ {
-				v.inputs[i].Reset()
-			}
-			return vc.ToViewCmd(vc.ListItems)
+func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
+	form := tview.NewForm()
+	form.SetBorderPadding(1, 1, 0, 1)
+	form.AddInputField("Name", v.item.Name, 40, nil, func(name string) {
+		v.item.Name = name
+	})
+	form.AddInputField("Number", v.value.Number, 40, tview.InputFieldInteger, func(number string) {
+		v.value.Number = number
+	})
+	form.AddInputField("Cardholder", v.value.Holder, 40, tview.InputFieldMaxLength(40), func(holder string) {
+		v.value.Holder = holder
+	})
+	form.AddInputField("Expired", v.value.Expired, 40, tview.InputFieldMaxLength(5), func(expired string) {
+		v.value.Expired = expired
+	})
+	form.AddInputField("CVV/CVC", v.value.CSC, 40, tview.InputFieldMaxLength(4), func(csc string) {
+		v.value.CSC = csc
+	})
+	form.AddButton("Save", func() {
+		go v.saveCmd()
+	})
+	v.form = form
+	v.Frame.SetPrimitive(form)
 
-		case tea.KeyTab, tea.KeyShiftTab, tea.KeyEnter, tea.KeyUp, tea.KeyDown:
-			// Did the user press enter while the submit button was focused?
-			if s == tea.KeyEnter && v.focusIndex == len(v.inputs) {
-				return v.cmd()
-			}
-
-			if s == tea.KeyUp || s == tea.KeyShiftTab {
-				v.focusIndex--
-			} else {
-				v.focusIndex++
-			}
-
-			if v.focusIndex > len(v.inputs) {
-				v.focusIndex = 0
-			} else if v.focusIndex < 0 {
-				v.focusIndex = len(v.inputs)
-			}
-
-			cmds := make([]tea.Cmd, len(v.inputs))
-			for i := 0; i <= len(v.inputs)-1; i++ {
-				if i == v.focusIndex {
-					// Set focused state
-					cmds[i] = v.inputs[i].Focus()
-					v.inputs[i].PromptStyle = vc.FocusedStyle
-					v.inputs[i].TextStyle = vc.FocusedStyle
-					continue
-				}
-				// Remove focused state
-				v.inputs[i].Blur()
-				v.inputs[i].PromptStyle = vc.NoStyle
-				v.inputs[i].TextStyle = vc.NoStyle
-			}
-
-			return tea.Batch(cmds...)
-		default:
-		}
-
-	case item.SuccessfulSetItemMsg:
-		return tea.Batch(vc.ToViewCmd(vc.ListItems),
-			vc.ShowMsgCmd("Saved!"))
-	case item.ConflictVersionSetItemMsg:
-		return tea.Batch(vc.ToViewCmd(vc.ListItems),
-			vc.ShowMsgCmd("Saved!"),
-			vc.ShowErrCmd(client.ErrConflictVersion.Error()))
-	}
-
-	// Handle character input and blinking
-	cmd := v.updateCardViewInputs(msg)
-
-	return cmd
+	return v.keyHandler, "tab next • esc back • "
 }
 
-func (v *View) updateCardViewInputs(msg tea.Msg) tea.Cmd {
-	cmds := make([]tea.Cmd, len(v.inputs))
+func (v *View) Update(vitem vault.Item, value any) error {
+	v.item = vitem
 
-	for i := range v.inputs {
-		v.inputs[i], cmds[i] = v.inputs[i].Update(msg)
+	if value == nil {
+		return nil
 	}
-
-	return tea.Batch(cmds...)
-}
-
-func (v View) View(body *strings.Builder, help *strings.Builder) {
-	if v.isNewItem {
-		body.WriteString("\n\nAdd new card:\n")
-	} else {
-		body.WriteString("\n\nEdit card:\n")
+	crd, ok := value.(vault.Card)
+	if !ok {
+		return common.NewErrMsg(item.ErrWrongItemType)
 	}
+	v.value = crd
 
-	for i := range v.inputs {
-		body.WriteString(v.inputs[i].View())
-		if i < len(v.inputs)-1 {
-			body.WriteRune('\n')
-		}
-	}
-
-	button := &vc.BlurredButton
-	if v.focusIndex == len(v.inputs) {
-		button = &vc.FocusedButton
-	}
-	fmt.Fprintf(body, "\n\n%s", *button)
-
-	help.WriteString("tab next • shift+tab prev • esc back • ")
-}
-
-var validateOnlyNumbersFn textinput.ValidateFunc = func(s string) error {
-	for i := 0; i < len(s); i++ {
-		if s[i] < '0' || s[i] > '9' {
-			return fmt.Errorf("contains not number")
-		}
-	}
 	return nil
 }
 
-var validateOnlyLettersAndSpacesFn textinput.ValidateFunc = func(s string) error {
-	for _, r := range s {
-		if !(unicode.IsLetter(r) || unicode.IsSpace(r)) {
-			return fmt.Errorf("contains not letters")
-		}
+func (v *View) saveCmd() {
+	err := item.Set(v.client, v.item, v.value)
+	if err != nil {
+		v.msgCh <- common.NewErrMsg(err)
+		return
 	}
-	return nil
+
+	// clear before go to list items
+	v.value = vault.Card{}
+	v.appUpdateFn(func() {
+		v.Frame.SetPrimitive(nil)
+		v.form = nil
+	})
+
+	v.msgCh <- common.NewMsg("Password saved!")
+	v.msgCh <- common.ToViewMsg{
+		ViewType: common.ListItems,
+	}
 }
 
-var validateExpiredDateFn textinput.ValidateFunc = func(s string) error {
-	for i := 0; i < len(s); i++ {
-		if (s[i] < '0' || s[i] > '9') && s[i] != '/' {
-			return fmt.Errorf("invalid expired date")
-		}
+func (v *View) keyHandler(event *tcell.EventKey) *tcell.EventKey {
+	switch event.Key() {
+	case tcell.KeyEsc:
+		v.value = vault.Card{}
+		v.Frame.SetPrimitive(nil)
+		v.form = nil
+		go func() {
+			v.msgCh <- common.ToViewMsg{
+				ViewType: common.ListItems,
+			}
+		}()
 	}
-	return nil
-}
 
-func (v View) cmd() tea.Cmd {
-	v.item.Name = v.inputs[0].Value()
-
-	return item.SetCmd(v.client,
-		v.item,
-		vault.Card{
-			Holder:  v.inputs[2].Value(),
-			Expired: v.inputs[3].Value(),
-			Number:  v.inputs[1].Value(),
-			CSC:     v.inputs[4].Value(),
-		})
+	return event
 }

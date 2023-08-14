@@ -1,97 +1,102 @@
 package list
 
 import (
-	"strings"
+	"context"
+	"errors"
 	"time"
 
-	"github.com/charmbracelet/bubbles/table"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 
 	"github.com/Karzoug/goph_keeper/client/internal/client"
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
-	vc "github.com/Karzoug/goph_keeper/client/internal/view/common"
-	"github.com/Karzoug/goph_keeper/client/internal/view/item"
+	"github.com/Karzoug/goph_keeper/client/internal/view/common"
 )
 
-var baseStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("240"))
+const syncCmdTimeout = 10 * time.Second
 
 type View struct {
-	client  *client.Client
+	Frame *tview.Frame
+	list  *tview.List
+
+	client *client.Client
+	msgCh  chan<- any
+
 	idNames []vault.IDName
-	table   table.Model
 }
 
-func New(c *client.Client) View {
-	columns := []table.Column{
-		{Title: "Name", Width: 70},
-	}
-
-	t := table.New(
-		table.WithColumns(columns),
-		table.WithFocused(true),
-		table.WithHeight(10),
-	)
-
-	s := table.DefaultStyles()
-	s.Header = s.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true).
-		Bold(false)
-	s.Selected = s.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(false)
-	t.SetStyles(s)
-
-	return View{
+func New(c *client.Client, msgCh chan<- any) View {
+	frame := tview.NewFrame(nil).
+		AddText("Your vault:", true, tview.AlignLeft, tcell.ColorWhite)
+	v := View{
 		client: c,
-		table:  t,
+		msgCh:  msgCh,
+		Frame:  frame,
 	}
+	return v
 }
 
-func (v *View) Update(msg tea.Msg) tea.Cmd {
-	var cmd tea.Cmd
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlL:
-			return vc.ToViewCmd(vc.Login)
-		case tea.KeyCtrlN:
-			return vc.ToViewCmd(vc.ChooseItemType)
-		case tea.KeyEnter:
-			return tea.Sequence(vc.ToViewCmd(vc.Item),
-				item.GetCmd(v.client, v.idNames[v.table.Cursor()].ID))
-		default:
-		}
+func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
+	list := tview.NewList().ShowSecondaryText(false)
 
-	case successfulListMsg:
-		v.idNames = msg
-		rows := make([]table.Row, len(msg))
-		for i, idName := range msg {
-			rows[i] = make(table.Row, 1)
-			rows[i][0] = idName.Name
-		}
-		v.table.SetRows(rows)
+	for r := 0; r < len(v.idNames); r++ {
+		list = list.AddItem(v.idNames[r].Name, "", 0, nil)
+	}
 
-	case successfulSyncMsg:
-		return tea.Batch(ListIDNameCmd(v.client), func() tea.Msg {
-			return vc.MsgMsg{
-				Msg:  "Your vault has been updated.",
-				Time: time.Now(),
+	v.list = list
+	v.Frame.SetPrimitive(list)
+
+	return v.keyHandler, "ctrl+n create • tab next • "
+}
+
+func (v *View) Update() error {
+	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+	defer cancel()
+
+	in, err := v.client.ListVaultItemsIDName(ctx)
+	if err != nil {
+		return common.NewErrMsg(err)
+	}
+	v.idNames = in
+	return nil
+}
+
+func (v *View) Sync(c *client.Client) error {
+	ctx, cancel := context.WithTimeout(context.TODO(), syncCmdTimeout)
+	defer cancel()
+
+	err := c.SyncVaultItems(ctx)
+	if err != nil {
+		if errors.Is(err, client.ErrUserNeedAuthentication) {
+			return nil
+		}
+		return common.NewErrMsg(err)
+	}
+	return nil
+}
+
+func (v *View) keyHandler(event *tcell.EventKey) *tcell.EventKey {
+	switch event.Key() {
+	case tcell.KeyCtrlN:
+		go func() {
+			v.msgCh <- common.ToViewMsg{
+				ViewType: common.ChooseItemType,
 			}
-		})
+		}()
+	case tcell.KeyCtrlL:
+		go func() {
+			v.msgCh <- common.ToViewMsg{
+				ViewType: common.Auth,
+			}
+		}()
+	case tcell.KeyEnter:
+		curr := v.list.GetCurrentItem()
+		go func() {
+			v.msgCh <- common.ToViewMsg{
+				ViewType: common.Item,
+				Value:    v.idNames[curr].ID,
+			}
+		}()
 	}
-	v.table, cmd = v.table.Update(msg)
-	return cmd
-}
-
-func (v View) View(body *strings.Builder, help *strings.Builder) {
-	body.WriteString("\n\nYour vault:\n")
-	body.WriteString(baseStyle.Render(v.table.View()))
-
-	help.WriteString("ctrl+n create • tab next • shift+tab prev • ")
+	return event
 }

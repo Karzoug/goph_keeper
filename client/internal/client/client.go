@@ -111,6 +111,10 @@ func (c *Client) Version() string {
 	return c.cfg.Version
 }
 
+func (c *Client) RootPath() string {
+	return c.cfg.RootPath
+}
+
 func (c *Client) Close() error {
 	const op = "close client"
 

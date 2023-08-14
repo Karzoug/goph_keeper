@@ -2,7 +2,7 @@
 build: clean build-client build-server
 
 build-client:
-	cd client/cmd/ && go build -o client
+	cd client/cmd/ && go build -tags=debug -o client
 
 build-server:
 	cd server/cmd/ && go build -o server
@@ -27,7 +27,9 @@ stop-server:
 	docker compose -f "server/build/docker-compose.yml" stop
 
 run-client:
-	cd ./client/cmd/ && go build -o client && GOPH_KEEPER_CERT_FILENAME='cert.pem' ./client
+	cd ./client/cmd/ && go build -tags=debug -o client
+	cp ./../config/dev.yaml ./config.yaml
+	./client
 
 .PHONY: lint
 lint:

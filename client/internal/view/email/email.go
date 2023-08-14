@@ -3,79 +3,93 @@ package email
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
-	"time"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 
 	"github.com/Karzoug/goph_keeper/client/internal/client"
-	vc "github.com/Karzoug/goph_keeper/client/internal/view/common"
+	"github.com/Karzoug/goph_keeper/client/internal/view/common"
 )
 
 type View struct {
-	client    *client.Client
-	textInput textinput.Model
+	Frame *tview.Frame
+	input *tview.InputField
+
+	client      *client.Client
+	msgCh       chan<- any
+	appUpdateFn func(func()) *tview.Application
+
+	code string
 }
 
-type successfulMsg struct{}
-
-func New(c *client.Client) View {
-	ti := textinput.New()
-	ti.Focus()
-	ti.CharLimit = 6
-	ti.Width = 10
-
-	return View{
-		client:    c,
-		textInput: ti,
+func New(c *client.Client, msgCh chan<- any, appUpdateFn func(func()) *tview.Application) View {
+	v := View{
+		client:      c,
+		msgCh:       msgCh,
+		appUpdateFn: appUpdateFn,
 	}
-}
 
-func (v *View) Update(msg tea.Msg) tea.Cmd {
-	var cmd tea.Cmd
+	input := tview.NewInputField().
+		SetLabel("Enter the code from mail: ").
+		SetFieldWidth(6).
+		SetAcceptanceFunc(tview.InputFieldInteger)
 
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEscape:
-			return vc.ToViewCmd(vc.Login)
-		case tea.KeyEnter:
-			return v.cmd
-		default:
+	input.SetDoneFunc(func(key tcell.Key) {
+		if key != tcell.KeyEnter {
+			return
 		}
+		code := v.input.GetText()
+		if len(code) < 6 {
+			msgCh <- errors.New("code too short")
+			return
+		}
+		v.code = code
+		input.SetDisabled(true)
+		go v.cmd()
+	})
 
-	case successfulMsg:
-		return vc.ToViewCmd(vc.ListItems)
-	}
+	frame := tview.NewFrame(input)
 
-	v.textInput, cmd = v.textInput.Update(msg)
-	return cmd
+	v.Frame = frame
+	v.input = input
+
+	return v
 }
 
-func (v View) View(body *strings.Builder, help *strings.Builder) {
-	fmt.Fprintf(body, "\n\nEnter the code from mail:\n\n%s", v.textInput.View())
-
-	help.WriteString("esc back • ")
+func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
+	return v.keyHandler, "esc back • "
 }
 
-func (v View) cmd() tea.Msg {
-	ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
+func (v *View) cmd() {
+	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
 	defer cancel()
 
-	err := v.client.VerifyEmail(ctx, v.textInput.Value())
+	err := v.client.VerifyEmail(ctx, v.code)
 	if err != nil {
-		if errors.Is(err, client.ErrInvalidEmailVerificationCode) {
-			return vc.ErrMsg{
-				Time: time.Now(),
-				Err:  client.ErrInvalidEmailVerificationCode.Error(),
-			}
-		}
-		return vc.ErrMsg{
-			Time: time.Now(),
-			Err:  err.Error(),
-		}
+		v.msgCh <- common.NewErrMsg(client.ErrInvalidEmailVerificationCode)
+		v.appUpdateFn(func() {
+			v.input.SetDisabled(false)
+		})
+		return
 	}
-	return successfulMsg{}
+	v.appUpdateFn(func() {
+		v.input.SetDisabled(false)
+		v.input.SetText("")
+	})
+	v.msgCh <- common.ToViewMsg{
+		ViewType: common.ListItems,
+	}
+}
+
+func (v *View) keyHandler(event *tcell.EventKey) *tcell.EventKey {
+	switch event.Key() {
+	case tcell.KeyEsc:
+		v.input.SetText("")
+		go func() {
+			v.msgCh <- common.ToViewMsg{
+				ViewType: common.Auth,
+			}
+		}()
+	}
+	return event
 }

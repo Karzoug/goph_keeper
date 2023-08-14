@@ -11,4 +11,5 @@ type Config struct {
 	Host                   string `yaml:"host" env:"GOPH_KEEPER_HOST" env-default:"localhost"`
 	Port                   string `yaml:"port" env:"GOPH_KEEPER_PORT" env-default:"8080"`
 	CertFilename           string `yaml:"cert_filename" env:"GOPH_KEEPER_CERT_FILENAME"`
+	RootPath               string `yaml:"root_path" env:"GOPH_KEEPER_ROOT_PATH"`
 }

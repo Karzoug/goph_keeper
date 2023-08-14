@@ -6,8 +6,6 @@ import (
 
 	"log/slog"
 
-	tea "github.com/charmbracelet/bubbletea"
-
 	"github.com/Karzoug/goph_keeper/client/internal/client"
 	"github.com/Karzoug/goph_keeper/client/internal/config"
 	"github.com/Karzoug/goph_keeper/client/internal/view"
@@ -34,7 +32,7 @@ func main() {
 
 	c, err := client.New(cfg, logger)
 	if err != nil {
-		logger.Error("application cannot start", sl.Error(err))
+		logger.Error("client create", sl.Error(err))
 		os.Exit(1)
 	}
 	defer c.Close()
@@ -46,10 +44,13 @@ func main() {
 		slog.String("build date", buildDate),
 	)
 
-	// os signals registered in bubble tea program
-	p := tea.NewProgram(view.New(c))
-	if _, err := p.Run(); err != nil {
-		logger.Debug("application stopped with error", sl.Error(err))
+	v, err := view.New(c)
+	if err != nil {
+		logger.Error("build ui", sl.Error(err))
+		os.Exit(1)
+	}
+	if err := v.Run(); err != nil {
+		logger.Error("application stopped with error", sl.Error(err))
 		os.Exit(1)
 	}
 }

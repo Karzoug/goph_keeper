@@ -1,64 +1,76 @@
 package choose
 
 import (
-	"strings"
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 
-	tea "github.com/charmbracelet/bubbletea"
-
-	vc "github.com/Karzoug/goph_keeper/client/internal/view/common"
-	cvault "github.com/Karzoug/goph_keeper/common/model/vault"
+	"github.com/Karzoug/goph_keeper/client/internal/client"
+	"github.com/Karzoug/goph_keeper/client/internal/view/common"
+	"github.com/Karzoug/goph_keeper/common/model/vault"
 )
 
-type SuccessfulMsg cvault.ItemType
-
 type View struct {
+	Frame *tview.Frame
+	list  *tview.List
+
+	client *client.Client
+	msgCh  chan<- any
+
 	choices []string
-	cursor  int
 }
 
-func New() View {
-	return View{
+func New(c *client.Client, msgCh chan<- any) View {
+	v := View{
+		client:  c,
+		msgCh:   msgCh,
 		choices: []string{"Password", "Card", "Text", "Binary"},
-		cursor:  0,
 	}
+
+	list := tview.NewList().ShowSecondaryText(false)
+	for i := 0; i < len(v.choices); i++ {
+		list = list.AddItem(v.choices[i], "", 0, nil)
+	}
+
+	frame := tview.NewFrame(list).
+		AddText("Choose a type of item:", true, tview.AlignLeft, tcell.ColorWhite)
+	v.list = list
+	v.Frame = frame
+
+	return v
 }
 
-func (v *View) Update(msg tea.Msg) tea.Cmd {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEsc:
-			return vc.ToViewCmd(vc.ListItems)
-		case tea.KeyUp, tea.KeyShiftTab:
-			if v.cursor > 0 {
-				v.cursor--
+func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
+	return v.keyHandler, "tab next • esc back • "
+}
+
+func (v *View) keyHandler(event *tcell.EventKey) *tcell.EventKey {
+	switch event.Key() {
+	case tcell.KeyEsc:
+		go func() {
+			v.msgCh <- common.ToViewMsg{
+				ViewType: common.ListItems,
 			}
-		case tea.KeyDown, tea.KeyTab:
-			if v.cursor < len(v.choices)-1 {
-				v.cursor++
-			}
-		case tea.KeyEnter, tea.KeySpace:
-			return tea.Sequence(vc.ToViewCmd(vc.Item),
-				func() tea.Msg {
-					return SuccessfulMsg(v.cursor + 1) // +1 because unknown type missing
-				})
+		}()
+	case tcell.KeyEnter:
+		var value vault.ItemType
+		switch v.list.GetCurrentItem() {
+		case 0:
+			value = vault.Password
+		case 1:
+			value = vault.Card
+		case 2:
+			value = vault.Text
+		case 3:
+			value = vault.Binary
 		default:
+			return event
 		}
+		go func() {
+			v.msgCh <- common.ToViewMsg{
+				ViewType: common.Item,
+				Value:    value,
+			}
+		}()
 	}
-	return nil
-}
-
-func (v View) View(body *strings.Builder, help *strings.Builder) {
-	body.WriteString("\n\nChoose a type of item\n\n")
-	for i, choice := range v.choices {
-		if i == v.cursor {
-			body.WriteString("> ")
-		} else {
-			body.WriteString("  ")
-		}
-		body.WriteString(choice)
-		body.WriteByte('\n')
-	}
-
-	help.WriteString("tab next • shift+tab prev • esc back • ")
+	return event
 }
