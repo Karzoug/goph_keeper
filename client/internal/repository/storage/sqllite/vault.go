@@ -133,6 +133,24 @@ func (s *storage) SetVaultItem(ctx context.Context, item vault.Item) error {
 
 	return nil
 }
+func (s *storage) DeleteVaultItem(ctx context.Context, id string) error {
+	const op = "sqlite: delete vault item"
+
+	res, err := s.db.ExecContext(ctx, `DELETE FROM vaults WHERE id = ?;`, id)
+	if err != nil {
+		return e.Wrap(op, err)
+	}
+
+	count, err := res.RowsAffected()
+	if err != nil {
+		return e.Wrap(op, err)
+	}
+	if count == 0 {
+		return serr.ErrNoRecordsAffected
+	}
+
+	return nil
+}
 func (s *storage) MoveVaultItemToConflict(ctx context.Context, id string) error {
 	const op = "sqlite: move vault item to conflict"
 

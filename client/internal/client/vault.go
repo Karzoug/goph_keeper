@@ -43,6 +43,17 @@ func (c *Client) DeleteVaultItem(ctx context.Context, id string) error {
 		return ErrAppInternal
 	}
 
+	// case: the data was only on the client,
+	// so there is no need to synchronize it with the server,
+	// just delete it
+	if item.ServerUpdatedAt == 0 {
+		if err := c.storage.DeleteVaultItem(ctx, id); err != nil {
+			c.logger.Debug(op, err)
+			return ErrAppInternal
+		}
+		return nil
+	}
+
 	item.Name = ""
 	item.Value = nil
 	item.IsDeleted = true

@@ -49,6 +49,7 @@ type clientStorage interface {
 	ListModifiedVaultItems(context.Context) ([]vault.Item, error)
 	GetVaultItem(ctx context.Context, id string) (vault.Item, error)
 	SetVaultItem(ctx context.Context, item vault.Item) error
+	DeleteVaultItem(ctx context.Context, id string) error
 	MoveVaultItemToConflict(ctx context.Context, id string) error
 	GetLastServerUpdatedAt(ctx context.Context) (int64, error)
 
