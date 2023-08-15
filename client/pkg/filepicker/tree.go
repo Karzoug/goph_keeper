@@ -1,8 +1,7 @@
 package filepicker
 
 import (
-	"io/ioutil"
-	"path/filepath"
+	"os"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -54,7 +53,7 @@ func (tree tree) GetCurrentPath() string {
 }
 
 func (tree *tree) addNode(directoryNode *tview.TreeNode, path string) {
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		panic(err)
 	}
@@ -62,19 +61,6 @@ func (tree *tree) addNode(directoryNode *tview.TreeNode, path string) {
 		node := createTreeNode(file.Name(), file.IsDir(), directoryNode)
 		directoryNode.AddChild(node)
 	}
-}
-
-func (tree tree) addNodeAll(node *tview.TreeNode) {
-	if !extractNodeReference(node).isDir {
-		return
-	}
-	children := node.GetChildren()
-	for _, child := range children {
-		if extractNodeReference(child).isDir {
-			tree.addNodeAll(child)
-		}
-	}
-	tree.expandOrAddNode(node)
 }
 
 func (tree tree) expandOrAddNode(node *tview.TreeNode) {
@@ -94,52 +80,4 @@ func (tree tree) expandOrAddNode(node *tview.TreeNode) {
 	} else {
 		node.SetExpanded(!node.IsExpanded())
 	}
-}
-
-func (tree tree) expandAll(node *tview.TreeNode) {
-	if !extractNodeReference(node).isDir {
-		return
-	}
-
-	for _, child := range node.GetChildren() {
-		if extractNodeReference(child).isDir {
-			tree.expandAll(child)
-		}
-	}
-
-	tree.expandOrAddNode(node)
-}
-
-func (tree tree) setAllDisplayTextToPath(node *tview.TreeNode) {
-	for _, child := range node.GetChildren() {
-		tree.setAllDisplayTextToPath(child)
-	}
-
-	nodeReference := extractNodeReference(node)
-	node.SetText(nodeReference.path)
-}
-
-func (tree tree) setAllDisplayTextToBasename(node *tview.TreeNode) {
-	for _, child := range node.GetChildren() {
-		tree.setAllDisplayTextToBasename(child)
-	}
-
-	nodeReference := extractNodeReference(node)
-	path := filepath.Base(nodeReference.path)
-	node.SetText(path)
-}
-
-func lastNodes(node *tview.TreeNode) []*tview.TreeNode {
-	nodes := []*tview.TreeNode{}
-	children := node.GetChildren()
-
-	if len(children) > 0 {
-		for _, child := range children {
-			nodes = append(nodes, lastNodes(child)...)
-		}
-		return nodes
-	}
-
-	nodes = append(nodes, node)
-	return nodes
 }

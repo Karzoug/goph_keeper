@@ -15,9 +15,8 @@ import (
 )
 
 type View struct {
-	Frame      *tview.Frame
-	form       *tview.Form
-	filepicker *filepicker.Window
+	Frame *tview.Frame
+	form  *tview.Form
 
 	item  vault.Item
 	value vault.Binary
@@ -169,7 +168,7 @@ func (v *View) delete() {
 }
 
 func (v *View) keyHandler(event *tcell.EventKey) *tcell.EventKey {
-	switch event.Key() {
+	switch event.Key() { // nolint:exhaustive
 	case tcell.KeyEsc:
 		v.value = vault.Binary{}
 		v.Frame.SetPrimitive(nil)

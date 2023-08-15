@@ -131,7 +131,7 @@ func (v *View) delete() {
 }
 
 func (v *View) keyHandler(event *tcell.EventKey) *tcell.EventKey {
-	switch event.Key() {
+	switch event.Key() { // nolint:exhaustive
 	case tcell.KeyEsc:
 		v.value = vault.Password{}
 		v.Frame.SetPrimitive(nil)

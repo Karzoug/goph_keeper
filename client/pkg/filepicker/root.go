@@ -25,7 +25,3 @@ func (view *root) addTree() {
 	view.
 		AddItem(view.tree.TreeView, 0, 0, 1, 1, 0, 0, true)
 }
-
-func (view *root) removeTree() {
-	view.RemoveItem(view.tree.TreeView)
-}

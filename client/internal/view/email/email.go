@@ -82,7 +82,7 @@ func (v *View) cmd() {
 }
 
 func (v *View) keyHandler(event *tcell.EventKey) *tcell.EventKey {
-	switch event.Key() {
+	switch event.Key() { // nolint:exhaustive
 	case tcell.KeyEsc:
 		v.input.SetText("")
 		go func() {

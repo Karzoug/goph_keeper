@@ -44,7 +44,7 @@ func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
 }
 
 func (v *View) keyHandler(event *tcell.EventKey) *tcell.EventKey {
-	switch event.Key() {
+	switch event.Key() { // nolint:exhaustive
 	case tcell.KeyEsc:
 		go func() {
 			v.msgCh <- common.ToViewMsg{

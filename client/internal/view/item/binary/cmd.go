@@ -24,7 +24,6 @@ func (v *View) createCmd(path string) error {
 		v.item.Type = cvault.BinaryLarge
 		// TODO: implement me
 		return errors.New("not implemented now, sorry")
-
 	} else {
 		v.item.Type = cvault.Binary
 	}

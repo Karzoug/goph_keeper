@@ -40,11 +40,11 @@ func (window Window) SetRect(x, y, width, height int) {
 	window.transition.SetRect(x, y, width, height)
 }
 func (window *Window) GetFieldHeight() int {
-	_, _, _, height := window.transition.GetRect()
+	_, _, _, height := window.transition.GetRect() //nolint:dogsled
 	return height
 }
 func (window *Window) GetFieldWidth() int {
-	_, _, width, _ := window.transition.GetRect()
+	_, _, width, _ := window.transition.GetRect() //nolint:dogsled
 	return width
 }
 func (window *Window) GetLabel() string {

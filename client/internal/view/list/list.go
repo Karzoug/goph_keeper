@@ -89,7 +89,7 @@ func (v *View) sync() {
 }
 
 func (v *View) keyHandler(event *tcell.EventKey) *tcell.EventKey {
-	switch event.Key() {
+	switch event.Key() { // nolint:exhaustive
 	case tcell.KeyCtrlN:
 		go func() {
 			v.msgCh <- common.ToViewMsg{

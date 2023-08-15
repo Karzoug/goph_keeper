@@ -143,7 +143,7 @@ func (v *View) handleMsgs() {
 			case common.ToViewMsg:
 				v.currentPage = msg.ViewType
 
-				switch msg.ViewType {
+				switch msg.ViewType { //nolint:exhaustive
 				case common.ListItems:
 					if err := v.subviews.list.Update(); err != nil {
 						err = common.NewErrMsg(err)
@@ -228,7 +228,7 @@ func (v *View) initSubview() {
 		kh  common.KeyHandlerFnc
 		hlp common.Help
 	)
-	switch v.currentPage {
+	switch v.currentPage { //nolint:exhaustive
 	case common.Auth:
 		kh, hlp = v.subviews.auth.Init()
 		v.app.SetFocus(v.subviews.auth.Frame)
@@ -308,7 +308,7 @@ func (v *View) toItem(value any) {
 		return
 	}
 
-	switch vitem.Type {
+	switch vitem.Type { // nolint:exhaustive
 	case cvault.Password:
 		v.currentPage = common.Password
 		if err := v.subviews.password.Update(vitem, dv); err != nil {

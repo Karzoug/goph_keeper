@@ -7,15 +7,6 @@ import (
 	"github.com/rivo/tview"
 )
 
-func absolutePath(node nodeReference) string {
-	relativePath := node.path
-	absolutePath, err := filepath.Abs(relativePath)
-	if err != nil {
-		panic(err)
-	}
-	return absolutePath
-}
-
 func extractNodeReference(node *tview.TreeNode) *nodeReference {
 	return node.GetReference().(*nodeReference)
 }
