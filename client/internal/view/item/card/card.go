@@ -72,7 +72,7 @@ func (v *View) Update(vitem vault.Item, value any) error {
 	}
 	crd, ok := value.(vault.Card)
 	if !ok {
-		return common.NewErrMsg(item.ErrWrongItemType)
+		return item.ErrWrongItemType
 	}
 	v.value = crd
 

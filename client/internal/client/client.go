@@ -23,7 +23,11 @@ import (
 	"github.com/Karzoug/goph_keeper/pkg/e"
 )
 
-const createClientTimeout = 5 * time.Second
+const (
+	createClientTimeout = 5 * time.Second
+	syncTimeout         = 5 * time.Second
+	syncInterval        = 5 * time.Minute
+)
 
 type clientCredentialsStorage interface {
 	// SetCredentials adds or updates email, token and encryption key.
@@ -60,6 +64,7 @@ type Client struct {
 	credentials        credentials
 	conn               *grpc.ClientConn
 	grpcClient         pb.GophKeeperServiceClient
+	closedCh           chan struct{}
 }
 
 func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
@@ -69,8 +74,9 @@ func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	defer cancel()
 
 	c := &Client{
-		cfg:    cfg,
-		logger: logger.With(slog.String("from", "client")),
+		cfg:      cfg,
+		logger:   logger.With(slog.String("from", "client")),
+		closedCh: make(chan struct{}),
 	}
 
 	ss, err := sqlite.New(ctx)
@@ -104,7 +110,26 @@ func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 
 	c.grpcClient = pb.NewGophKeeperServiceClient(c.conn)
 
+	go c.runSyncLoop()
+
 	return c, nil
+}
+
+func (c *Client) runSyncLoop() {
+	ticker := time.NewTicker(syncInterval)
+	defer ticker.Stop()
+
+	for {
+		ctx, cancel := context.WithTimeout(context.TODO(), syncTimeout)
+		defer cancel()
+		_ = c.SyncVaultItems(ctx)
+
+		select {
+		case <-c.closedCh:
+			return
+		case <-ticker.C:
+		}
+	}
 }
 
 func (c *Client) Version() string {
@@ -118,6 +143,7 @@ func (c *Client) RootPath() string {
 func (c *Client) Close() error {
 	const op = "close client"
 
+	close(c.closedCh)
 	return e.Wrap(op, c.storage.Close())
 }
 

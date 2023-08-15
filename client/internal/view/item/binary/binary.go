@@ -100,7 +100,7 @@ func (v *View) Update(vitem vault.Item, value any) error {
 	}
 	b, ok := value.(vault.Binary)
 	if !ok {
-		return common.NewErrMsg(item.ErrWrongItemType)
+		return item.ErrWrongItemType
 	}
 	v.value = b
 

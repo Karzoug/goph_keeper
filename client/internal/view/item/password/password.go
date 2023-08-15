@@ -66,7 +66,7 @@ func (v *View) Update(vitem vault.Item, value any) error {
 	}
 	psw, ok := value.(vault.Password)
 	if !ok {
-		return common.NewErrMsg(item.ErrWrongItemType)
+		return item.ErrWrongItemType
 	}
 	v.value = psw
 

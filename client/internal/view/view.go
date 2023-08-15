@@ -78,7 +78,7 @@ func New(client *client.Client) (*View, error) {
 
 	// create subviews
 	v.subviews.auth = auth.New(client, v.msgCh, app.QueueUpdateDraw)
-	v.subviews.list = list.New(client, v.msgCh)
+	v.subviews.list = list.New(client, v.msgCh, app.QueueUpdateDraw)
 	v.subviews.email = email.New(client, v.msgCh, app.QueueUpdateDraw)
 	v.subviews.choose = choose.New(client, v.msgCh)
 	v.subviews.password = password.New(client, v.msgCh, app.QueueUpdateDraw)
@@ -146,6 +146,7 @@ func (v *View) handleMsgs() {
 				switch msg.ViewType {
 				case common.ListItems:
 					if err := v.subviews.list.Update(); err != nil {
+						err = common.NewErrMsg(err)
 						v.app.QueueUpdateDraw(func() {
 							v.footer.errText.SetText("Error: " + err.Error())
 						})
@@ -311,6 +312,7 @@ func (v *View) toItem(value any) {
 	case cvault.Password:
 		v.currentPage = common.Password
 		if err := v.subviews.password.Update(vitem, dv); err != nil {
+			err = common.NewErrMsg(err)
 			v.app.QueueUpdateDraw(func() {
 				v.footer.errText.SetText("Error: " + err.Error())
 			})
@@ -318,6 +320,7 @@ func (v *View) toItem(value any) {
 	case cvault.Card:
 		v.currentPage = common.Card
 		if err := v.subviews.card.Update(vitem, dv); err != nil {
+			err = common.NewErrMsg(err)
 			v.app.QueueUpdateDraw(func() {
 				v.footer.errText.SetText("Error: " + err.Error())
 			})
@@ -325,6 +328,7 @@ func (v *View) toItem(value any) {
 	case cvault.Text:
 		v.currentPage = common.Text
 		if err := v.subviews.text.Update(vitem, dv); err != nil {
+			err = common.NewErrMsg(err)
 			v.app.QueueUpdateDraw(func() {
 				v.footer.errText.SetText("Error: " + err.Error())
 			})
@@ -332,6 +336,7 @@ func (v *View) toItem(value any) {
 	case cvault.Binary:
 		v.currentPage = common.Binary
 		if err := v.subviews.binary.Update(vitem, dv); err != nil {
+			err = common.NewErrMsg(err)
 			v.app.QueueUpdateDraw(func() {
 				v.footer.errText.SetText("Error: " + err.Error())
 			})

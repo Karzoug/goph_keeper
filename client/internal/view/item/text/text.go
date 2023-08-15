@@ -64,7 +64,7 @@ func (v *View) Update(vitem vault.Item, value any) error {
 	}
 	txt, ok := value.(vault.Text)
 	if !ok {
-		return common.NewErrMsg(item.ErrWrongItemType)
+		return item.ErrWrongItemType
 	}
 	v.value = txt
 
