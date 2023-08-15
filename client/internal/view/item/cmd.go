@@ -27,8 +27,17 @@ func Set(c *client.Client, item vault.Item, value any) error {
 	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
 	defer cancel()
 
-	err := c.EncryptAndSetVaultItem(ctx, item, value)
-	if err != nil {
+	if err := c.EncryptAndSetVaultItem(ctx, item, value); err != nil {
+		return err
+	}
+	return nil
+}
+
+func Delete(c *client.Client, id string) error {
+	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+	defer cancel()
+
+	if err := c.DeleteVaultItem(ctx, id); err != nil {
 		return err
 	}
 	return nil

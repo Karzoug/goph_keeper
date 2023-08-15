@@ -1,6 +1,7 @@
 package binary
 
 import (
+	"errors"
 	"os"
 
 	"github.com/gdamore/tcell/v2"
@@ -73,7 +74,11 @@ func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
 			AddFormItem(filepicker).
 			AddButton("Decrypt and save", func() {
 				v.path = filepicker.GetCurrentPath()
-				go v.saveCmd()
+				go v.save()
+			}).
+			AddButton("Delete", func() {
+				v.path = filepicker.GetCurrentPath()
+				go v.delete()
 			})
 	} else {
 		f.AddInputField("Name", v.item.Name, 40, nil, func(name string) {
@@ -82,7 +87,7 @@ func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
 			AddFormItem(filepicker).
 			AddButton("Save", func() {
 				v.path = filepicker.GetCurrentPath()
-				go v.saveCmd()
+				go v.save()
 			})
 	}
 
@@ -107,7 +112,7 @@ func (v *View) Update(vitem vault.Item, value any) error {
 	return nil
 }
 
-func (v *View) saveCmd() {
+func (v *View) save() {
 	var err error
 	if v.item.ID == "" {
 		err = v.createCmd(v.path)
@@ -116,7 +121,9 @@ func (v *View) saveCmd() {
 	}
 	if err != nil {
 		v.msgCh <- common.NewErrMsg(err)
-		return
+		if errors.Is(err, client.ErrAppInternal) {
+			return
+		}
 	}
 
 	// clear before go to list items
@@ -127,6 +134,27 @@ func (v *View) saveCmd() {
 	})
 
 	v.msgCh <- common.NewMsg("Binary saved!")
+	v.msgCh <- common.ToViewMsg{
+		ViewType: common.ListItems,
+	}
+}
+
+func (v *View) delete() {
+	if err := item.Delete(v.client, v.item.ID); err != nil {
+		v.msgCh <- common.NewErrMsg(err)
+		if errors.Is(err, client.ErrAppInternal) {
+			return
+		}
+	}
+
+	// clear before go to list items
+	v.value = vault.Binary{}
+	v.app.QueueUpdateDraw(func() {
+		v.Frame.SetPrimitive(nil)
+		v.form = nil
+	})
+
+	v.msgCh <- common.NewMsg("Item deleted!")
 	v.msgCh <- common.ToViewMsg{
 		ViewType: common.ListItems,
 	}

@@ -1,6 +1,8 @@
 package text
 
 import (
+	"errors"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
@@ -28,28 +30,30 @@ func New(c *client.Client, msgCh chan<- any, appUpdateFn func(func()) *tview.App
 		msgCh:       msgCh,
 		appUpdateFn: appUpdateFn,
 	}
-
 	frame := tview.NewFrame(nil).
 		AddText("Save text:", true, tview.AlignLeft, tcell.ColorWhite)
 
 	v.Frame = frame
-
 	return v
 }
 
 func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
-	form := tview.NewForm()
+	form := tview.NewForm().
+		AddInputField("Name", v.item.Name, 60, nil, func(name string) {
+			v.item.Name = name
+		}).
+		AddTextArea("Text", v.value.Text, 60, 10, 0, func(text string) {
+			v.value.Text = text
+		}).
+		AddButton("Save", func() {
+			go v.save()
+		})
+	if v.item.ID != "" {
+		form.AddButton("Delete", func() {
+			go v.delete()
+		})
+	}
 	form.SetBorderPadding(1, 1, 0, 1)
-	form.AddInputField("Name", v.item.Name, 60, nil, func(name string) {
-		v.item.Name = name
-	})
-	form.AddTextArea("Text", v.value.Text, 60, 10, 0, func(text string) {
-		v.value.Text = text
-	})
-	form.AddButton("Save", func() {
-		form.ClearButtons()
-		go v.saveCmd()
-	})
 	v.form = form
 	v.Frame.SetPrimitive(form)
 
@@ -71,17 +75,12 @@ func (v *View) Update(vitem vault.Item, value any) error {
 	return nil
 }
 
-func (v *View) saveCmd() {
-	err := item.Set(v.client, v.item, v.value)
-	if err != nil {
+func (v *View) save() {
+	if err := item.Set(v.client, v.item, v.value); err != nil {
 		v.msgCh <- common.NewErrMsg(err)
-		v.appUpdateFn(func() {
-			v.form.AddButton("Save", func() {
-				v.form.ClearButtons()
-				go v.saveCmd()
-			})
-		})
-		return
+		if errors.Is(err, client.ErrAppInternal) {
+			return
+		}
 	}
 
 	// clear before go to list items
@@ -92,6 +91,27 @@ func (v *View) saveCmd() {
 	})
 
 	v.msgCh <- common.NewMsg("Text saved!")
+	v.msgCh <- common.ToViewMsg{
+		ViewType: common.ListItems,
+	}
+}
+
+func (v *View) delete() {
+	if err := item.Delete(v.client, v.item.ID); err != nil {
+		v.msgCh <- common.NewErrMsg(err)
+		if errors.Is(err, client.ErrAppInternal) {
+			return
+		}
+	}
+
+	// clear before go to list items
+	v.value = vault.Text{}
+	v.appUpdateFn(func() {
+		v.Frame.SetPrimitive(nil)
+		v.form = nil
+	})
+
+	v.msgCh <- common.NewMsg("Item deleted!")
 	v.msgCh <- common.ToViewMsg{
 		ViewType: common.ListItems,
 	}
