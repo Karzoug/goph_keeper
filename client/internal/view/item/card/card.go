@@ -31,7 +31,7 @@ func New(c *client.Client, msgCh chan<- any, appUpdateFn func(func()) *tview.App
 		appUpdateFn: appUpdateFn,
 	}
 	frame := tview.NewFrame(nil).
-		AddText("Save password:", true, tview.AlignLeft, tcell.ColorWhite)
+		AddText("Save card:", true, tview.AlignLeft, tcell.ColorWhite)
 	v.Frame = frame
 	return v
 }
@@ -56,9 +56,18 @@ func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
 		AddButton("Save", func() {
 			go v.save()
 		})
+	modal := tview.NewModal().
+		SetText("Are you sure?").
+		AddButtons([]string{"Yes", "No"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			if buttonIndex == 0 {
+				go v.delete()
+			}
+			v.Frame.SetPrimitive(form)
+		})
 	if v.item.ID != "" {
 		form.AddButton("Delete", func() {
-			go v.delete()
+			v.Frame.SetPrimitive(modal)
 		})
 	}
 	form.SetBorderPadding(1, 1, 0, 1)

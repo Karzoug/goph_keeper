@@ -67,6 +67,15 @@ func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
 	f := tview.NewForm()
 
 	if v.item.ID != "" {
+		modal := tview.NewModal().
+			SetText("Are you sure?").
+			AddButtons([]string{"Yes", "No"}).
+			SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+				if buttonIndex == 0 {
+					go v.delete()
+				}
+				v.Frame.SetPrimitive(f)
+			})
 		f.AddTextView("Name", v.item.Name, 40, 1, false, false).
 			AddInputField("Filename", v.filename, 40, nil, func(filename string) {
 				v.filename = filename
@@ -77,8 +86,7 @@ func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
 				go v.save()
 			}).
 			AddButton("Delete", func() {
-				v.path = filepicker.GetCurrentPath()
-				go v.delete()
+				v.Frame.SetPrimitive(modal)
 			})
 	} else {
 		f.AddInputField("Name", v.item.Name, 40, nil, func(name string) {
