@@ -15,6 +15,7 @@ type View struct {
 	Frame *tview.Frame
 	form  *tview.Form
 
+	baseContext context.Context
 	client      *client.Client
 	msgCh       chan<- any
 	appUpdateFn func(func()) *tview.Application
@@ -33,6 +34,10 @@ func New(c *client.Client, msgCh chan<- any, appUpdateFn func(func()) *tview.App
 		AddText("Enter email and password to login/register", true, tview.AlignLeft, tcell.ColorWhite)
 	v.Frame = frame
 	return v
+}
+
+func (v *View) Update(ctx context.Context) {
+	v.baseContext = ctx
 }
 
 func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
@@ -57,7 +62,7 @@ func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
 }
 
 func (v *View) loginCmd() {
-	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+	ctx, cancel := context.WithTimeout(v.baseContext, common.StandartTimeout)
 	defer cancel()
 
 	err := v.client.Login(ctx, v.email, []byte(v.password))
@@ -94,7 +99,7 @@ func (v *View) loginCmd() {
 }
 
 func (v *View) registerCmd() {
-	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+	ctx, cancel := context.WithTimeout(v.baseContext, common.StandartTimeout)
 	defer cancel()
 
 	err := v.client.Register(ctx, v.email, []byte(v.password))

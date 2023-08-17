@@ -1,6 +1,7 @@
 package card
 
 import (
+	"context"
 	"errors"
 
 	"github.com/gdamore/tcell/v2"
@@ -16,8 +17,9 @@ type View struct {
 	Frame *tview.Frame
 	form  *tview.Form
 
-	item  vault.Item
-	value vault.Card
+	baseContext context.Context
+	item        vault.Item
+	value       vault.Card
 
 	client      *client.Client
 	msgCh       chan<- any
@@ -77,7 +79,8 @@ func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
 	return v.keyHandler, "tab next • esc back • "
 }
 
-func (v *View) Update(vitem vault.Item, value any) error {
+func (v *View) Update(ctx context.Context, vitem vault.Item, value any) error {
+	v.baseContext = ctx
 	v.item = vitem
 
 	if value == nil {
@@ -93,7 +96,7 @@ func (v *View) Update(vitem vault.Item, value any) error {
 }
 
 func (v *View) save() {
-	err := item.Set(v.client, v.item, v.value)
+	err := item.Set(v.baseContext, v.client, v.item, v.value)
 	if err != nil {
 		v.msgCh <- common.NewErrMsg(err)
 		if errors.Is(err, client.ErrAppInternal) {
@@ -115,7 +118,7 @@ func (v *View) save() {
 }
 
 func (v *View) delete() {
-	if err := item.Delete(v.client, v.item.ID); err != nil {
+	if err := item.Delete(v.baseContext, v.client, v.item.ID); err != nil {
 		v.msgCh <- common.NewErrMsg(err)
 		if errors.Is(err, client.ErrAppInternal) {
 			return

@@ -15,6 +15,7 @@ require (
 	github.com/rs/xid v1.5.0
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/crypto v0.10.0
+	golang.org/x/sync v0.2.0
 	google.golang.org/grpc v1.57.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	modernc.org/sqlite v1.24.0

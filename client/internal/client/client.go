@@ -65,19 +65,17 @@ type Client struct {
 	credentials        credentials
 	conn               *grpc.ClientConn
 	grpcClient         pb.GophKeeperServiceClient
-	closedCh           chan struct{}
 }
 
-func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
+func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	const op = "create client"
 
-	ctx, cancel := context.WithTimeout(context.Background(), createClientTimeout)
+	ctx, cancel := context.WithTimeout(ctx, createClientTimeout)
 	defer cancel()
 
 	c := &Client{
-		cfg:      cfg,
-		logger:   logger.With(slog.String("from", "client")),
-		closedCh: make(chan struct{}),
+		cfg:    cfg,
+		logger: logger.With(slog.String("from", "client")),
 	}
 
 	ss, err := sqlite.New(ctx)
@@ -111,24 +109,25 @@ func New(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 
 	c.grpcClient = pb.NewGophKeeperServiceClient(c.conn)
 
-	go c.runSyncLoop()
-
 	return c, nil
 }
 
-func (c *Client) runSyncLoop() {
+func (c *Client) Run(ctx context.Context) error {
+	const op = "client: run"
+
 	ticker := time.NewTicker(syncInterval)
 	defer ticker.Stop()
 
 	for {
-		ctx, cancel := context.WithTimeout(context.TODO(), syncTimeout)
-		defer cancel()
-		_ = c.SyncVaultItems(ctx)
-
 		select {
-		case <-c.closedCh:
-			return
+		case <-ctx.Done():
+			return e.Wrap(op, c.storage.Close())
 		case <-ticker.C:
+			func() {
+				syncCtx, cancel := context.WithTimeout(ctx, syncTimeout)
+				defer cancel()
+				_ = c.SyncVaultItems(syncCtx)
+			}()
 		}
 	}
 }
@@ -139,13 +138,6 @@ func (c *Client) Version() string {
 
 func (c *Client) RootPath() string {
 	return c.cfg.RootPath
-}
-
-func (c *Client) Close() error {
-	const op = "close client"
-
-	close(c.closedCh)
-	return e.Wrap(op, c.storage.Close())
 }
 
 func loadTLSCredentials(host, certFilename string) (gcreds.TransportCredentials, error) {

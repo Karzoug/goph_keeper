@@ -35,7 +35,7 @@ type View struct {
 	pages       *tview.Pages
 	currentPage common.ViewType
 	msgCh       chan any
-	closeCh     chan struct{}
+	baseContext context.Context
 
 	client *client.Client
 
@@ -64,9 +64,8 @@ func New(client *client.Client) (*View, error) {
 	var pages = tview.NewPages()
 
 	v := &View{
-		msgCh:   make(chan any),
-		closeCh: make(chan struct{}),
-		client:  client,
+		msgCh:  make(chan any),
+		client: client,
 	}
 
 	// create footer to view app info
@@ -126,7 +125,7 @@ func New(client *client.Client) (*View, error) {
 func (v *View) handleMsgs() {
 	for {
 		select {
-		case <-v.closeCh:
+		case <-v.baseContext.Done():
 			return
 		case msg := <-v.msgCh:
 			switch msg := msg.(type) {
@@ -145,7 +144,7 @@ func (v *View) handleMsgs() {
 
 				switch msg.ViewType { //nolint:exhaustive
 				case common.ListItems:
-					if err := v.subviews.list.Update(); err != nil {
+					if err := v.subviews.list.Update(v.baseContext); err != nil {
 						err = common.NewErrMsg(err)
 						v.app.QueueUpdateDraw(func() {
 							v.footer.errText.SetText("Error: " + err.Error())
@@ -154,6 +153,10 @@ func (v *View) handleMsgs() {
 					}
 				case common.Item:
 					v.toItem(msg.Value)
+				case common.EmailVerification:
+					v.subviews.email.Update(v.baseContext)
+				case common.Auth:
+					v.subviews.auth.Update(v.baseContext)
 				}
 
 				v.pages.SwitchToPage(v.currentPage.String())
@@ -162,12 +165,21 @@ func (v *View) handleMsgs() {
 	}
 }
 
-func (v *View) Run() error {
+func (v *View) Run(ctx context.Context) error {
+	baseContext, cancel := context.WithCancel(ctx)
+	v.baseContext = baseContext
+
 	var err error
 	// run main loop to handle tview events
 	go func() {
-		err = v.app.Run()
-		close(v.closeCh)
+		_ = v.app.Run() // (!) run only after setting base context
+		cancel()
+	}()
+
+	// if parent context is canceled stop tview app
+	go func() {
+		<-ctx.Done()
+		v.app.Stop()
 	}()
 
 	// run loop to handle msgs
@@ -186,7 +198,7 @@ func (v *View) Run() error {
 		}
 	}
 
-	<-v.closeCh
+	<-v.baseContext.Done()
 	return err
 }
 
@@ -217,7 +229,7 @@ func (v *View) updateNotifications() {
 					v.footer.statusText.SetText("You are not logged in to the server, the data is not synced.")
 				})
 			}
-		case <-v.closeCh:
+		case <-v.baseContext.Done():
 			return
 		}
 	}
@@ -254,10 +266,14 @@ func (v *View) initSubview() {
 		kh, hlp = v.subviews.binary.Init()
 		v.app.SetFocus(v.subviews.binary.Frame)
 	}
+
 	v.root.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyCtrlC { // replace standard tview ctrl+c handler to do nothing
+			return nil
+		}
 		if event.Key() == tcell.KeyCtrlX {
 			go func() {
-				ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+				ctx, cancel := context.WithTimeout(v.baseContext, common.StandartTimeout)
 				defer cancel()
 
 				if err := v.client.Logout(ctx); err != nil {
@@ -297,7 +313,7 @@ func (v *View) toItem(value any) {
 		vitem.Type = value
 	case string:
 		var err error
-		if vitem, dv, err = item.Get(v.client, value); err != nil {
+		if vitem, dv, err = item.Get(v.baseContext, v.client, value); err != nil {
 			v.app.QueueUpdateDraw(func() {
 				v.footer.errText.SetText("Error: " + err.Error())
 			})
@@ -311,7 +327,7 @@ func (v *View) toItem(value any) {
 	switch vitem.Type { // nolint:exhaustive
 	case cvault.Password:
 		v.currentPage = common.Password
-		if err := v.subviews.password.Update(vitem, dv); err != nil {
+		if err := v.subviews.password.Update(v.baseContext, vitem, dv); err != nil {
 			err = common.NewErrMsg(err)
 			v.app.QueueUpdateDraw(func() {
 				v.footer.errText.SetText("Error: " + err.Error())
@@ -319,7 +335,7 @@ func (v *View) toItem(value any) {
 		}
 	case cvault.Card:
 		v.currentPage = common.Card
-		if err := v.subviews.card.Update(vitem, dv); err != nil {
+		if err := v.subviews.card.Update(v.baseContext, vitem, dv); err != nil {
 			err = common.NewErrMsg(err)
 			v.app.QueueUpdateDraw(func() {
 				v.footer.errText.SetText("Error: " + err.Error())
@@ -327,7 +343,7 @@ func (v *View) toItem(value any) {
 		}
 	case cvault.Text:
 		v.currentPage = common.Text
-		if err := v.subviews.text.Update(vitem, dv); err != nil {
+		if err := v.subviews.text.Update(v.baseContext, vitem, dv); err != nil {
 			err = common.NewErrMsg(err)
 			v.app.QueueUpdateDraw(func() {
 				v.footer.errText.SetText("Error: " + err.Error())
@@ -335,7 +351,7 @@ func (v *View) toItem(value any) {
 		}
 	case cvault.Binary:
 		v.currentPage = common.Binary
-		if err := v.subviews.binary.Update(vitem, dv); err != nil {
+		if err := v.subviews.binary.Update(v.baseContext, vitem, dv); err != nil {
 			err = common.NewErrMsg(err)
 			v.app.QueueUpdateDraw(func() {
 				v.footer.errText.SetText("Error: " + err.Error())

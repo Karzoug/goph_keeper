@@ -1,6 +1,7 @@
 package binary
 
 import (
+	"context"
 	"errors"
 	"os"
 
@@ -18,8 +19,9 @@ type View struct {
 	Frame *tview.Frame
 	form  *tview.Form
 
-	item  vault.Item
-	value vault.Binary
+	baseContext context.Context
+	item        vault.Item
+	value       vault.Binary
 
 	path     string
 	filename string
@@ -104,7 +106,8 @@ func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
 	return v.keyHandler, "tab next • esc back • "
 }
 
-func (v *View) Update(vitem vault.Item, value any) error {
+func (v *View) Update(ctx context.Context, vitem vault.Item, value any) error {
+	v.baseContext = ctx
 	v.item = vitem
 
 	if value == nil {
@@ -147,7 +150,7 @@ func (v *View) save() {
 }
 
 func (v *View) delete() {
-	if err := item.Delete(v.client, v.item.ID); err != nil {
+	if err := item.Delete(v.baseContext, v.client, v.item.ID); err != nil {
 		v.msgCh <- common.NewErrMsg(err)
 		if errors.Is(err, client.ErrAppInternal) {
 			return

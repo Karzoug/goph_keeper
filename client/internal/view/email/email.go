@@ -15,6 +15,7 @@ type View struct {
 	Frame *tview.Frame
 	input *tview.InputField
 
+	baseContext context.Context
 	client      *client.Client
 	msgCh       chan<- any
 	appUpdateFn func(func()) *tview.Application
@@ -56,12 +57,16 @@ func New(c *client.Client, msgCh chan<- any, appUpdateFn func(func()) *tview.App
 	return v
 }
 
+func (v *View) Update(ctx context.Context) {
+	v.baseContext = ctx
+}
+
 func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
 	return v.keyHandler, "esc back • "
 }
 
 func (v *View) cmd() {
-	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+	ctx, cancel := context.WithTimeout(v.baseContext, common.StandartTimeout)
 	defer cancel()
 
 	err := v.client.VerifyEmail(ctx, v.code)

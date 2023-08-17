@@ -19,6 +19,7 @@ type View struct {
 	Frame *tview.Frame
 	list  *tview.List
 
+	baseContext context.Context
 	client      *client.Client
 	msgCh       chan<- any
 	appUpdateFn func(func()) *tview.Application
@@ -51,8 +52,10 @@ func (v *View) Init() (common.KeyHandlerFnc, common.Help) {
 	return v.keyHandler, "ctrl+n create • tab next • ctrl+u sync • "
 }
 
-func (v *View) Update() error {
-	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+func (v *View) Update(ctx context.Context) error {
+	v.baseContext = ctx
+
+	ctx, cancel := context.WithTimeout(v.baseContext, common.StandartTimeout)
 	defer cancel()
 
 	in, err := v.client.ListVaultItemsIDName(ctx)
@@ -64,7 +67,7 @@ func (v *View) Update() error {
 }
 
 func (v *View) sync() {
-	ctx, cancel := context.WithTimeout(context.TODO(), syncCmdTimeout)
+	ctx, cancel := context.WithTimeout(v.baseContext, syncCmdTimeout)
 	defer cancel()
 
 	err := v.client.SyncVaultItems(ctx)
@@ -76,7 +79,7 @@ func (v *View) sync() {
 		return
 	}
 
-	if err := v.Update(); err != nil {
+	if err := v.Update(v.baseContext); err != nil {
 		v.msgCh <- common.NewErrMsg(err)
 		return
 	}

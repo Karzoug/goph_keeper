@@ -36,7 +36,7 @@ func (v *View) createCmd(path string) error {
 		return e.Wrap("open file problem", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.TODO(), vc.StandartTimeout)
+	ctx, cancel := context.WithTimeout(v.baseContext, vc.StandartTimeout)
 	defer cancel()
 
 	err = v.client.EncryptAndSetVaultItem(ctx, v.item, vault.Binary{Value: value})

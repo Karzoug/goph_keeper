@@ -11,8 +11,8 @@ import (
 
 var ErrWrongItemType = errors.New("got wrong item type")
 
-func Get(c *client.Client, id string) (vault.Item, any, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+func Get(ctx context.Context, c *client.Client, id string) (vault.Item, any, error) {
+	ctx, cancel := context.WithTimeout(ctx, common.StandartTimeout)
 	defer cancel()
 
 	item, value, err := c.DecryptAndGetVaultItem(ctx, id)
@@ -23,8 +23,8 @@ func Get(c *client.Client, id string) (vault.Item, any, error) {
 	return item, value, nil
 }
 
-func Set(c *client.Client, item vault.Item, value any) error {
-	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+func Set(ctx context.Context, c *client.Client, item vault.Item, value any) error {
+	ctx, cancel := context.WithTimeout(ctx, common.StandartTimeout)
 	defer cancel()
 
 	if err := c.EncryptAndSetVaultItem(ctx, item, value); err != nil {
@@ -33,8 +33,8 @@ func Set(c *client.Client, item vault.Item, value any) error {
 	return nil
 }
 
-func Delete(c *client.Client, id string) error {
-	ctx, cancel := context.WithTimeout(context.TODO(), common.StandartTimeout)
+func Delete(ctx context.Context, c *client.Client, id string) error {
+	ctx, cancel := context.WithTimeout(ctx, common.StandartTimeout)
 	defer cancel()
 
 	if err := c.DeleteVaultItem(ctx, id); err != nil {

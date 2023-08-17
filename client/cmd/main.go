@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"log/slog"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/Karzoug/goph_keeper/client/internal/client"
 	"github.com/Karzoug/goph_keeper/client/internal/config"
@@ -30,12 +35,14 @@ func main() {
 		log.Fatal("build logger error:\n", err)
 	}
 
-	c, err := client.New(cfg, logger)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
+
+	c, err := client.New(ctx, cfg, logger)
 	if err != nil {
 		logger.Error("client create", sl.Error(err))
 		os.Exit(1)
 	}
-	defer c.Close()
 
 	logger.Debug(
 		"starting goph-keeper client",
@@ -49,7 +56,17 @@ func main() {
 		logger.Error("build ui", sl.Error(err))
 		os.Exit(1)
 	}
-	if err := v.Run(); err != nil {
+
+	eg, ctx := errgroup.WithContext(ctx)
+
+	eg.Go(func() error {
+		return c.Run(ctx)
+	})
+	eg.Go(func() error {
+		return v.Run(ctx)
+	})
+
+	if err := eg.Wait(); err != nil {
 		logger.Error("application stopped with error", sl.Error(err))
 		os.Exit(1)
 	}
