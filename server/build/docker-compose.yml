@@ -1,0 +1,60 @@
+version: '3.9'
+
+services:
+  gophermart-postgres:
+    depends_on:
+      - redis 
+      - migrate
+      - mailpit
+    build:
+      context: ./../
+      dockerfile: ./build/server.Dockerfile
+    container_name: goph_keeper_server
+    env_file:
+      - dev.env
+      - dev_secret_key.env
+    ports:
+      - ${GRPC_PORT}:${GRPC_PORT}
+    deploy:
+      restart_policy:
+        condition: on-failure
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_DB: $PG_DB
+      POSTGRES_USER: $PG_USER
+      POSTGRES_PASSWORD: $PG_PASSWORD
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-docker:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --dbname postgres://${PG_USER}:${PG_PASSWORD}@postgres:5432/${PG_DB}?sslmode=disable"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./../migrations/postgres:/migrations
+    command: ["-path", "/migrations", "-database",  "postgres://${PG_USER}:${PG_PASSWORD}@postgres:5432/${PG_DB}?sslmode=disable", "up"]
+    links: 
+      - postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+    restart: unless-stopped
+
+volumes:
+  postgres-docker:

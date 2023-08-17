@@ -1,0 +1,160 @@
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  tests:
+    runs-on: ubuntu-latest
+    container: golang:1.21
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gophkeeper
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mailpit:
+        image: axllent/mailpit
+        ports:
+            - 1025:1025
+            - 8025:8025
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Generate TLS cert and key
+        run: |
+          cd ./test/
+          mkdir integration
+          cd integration/
+          go run /usr/local/go/src/crypto/tls/generate_cert.go -duration=168h -ca=true -host='localhost' $(date +"%b %d %H:%M:%S %Y")
+
+      - name: Build server binary
+        run: |
+          cd server/cmd
+          go build -buildvcs=false -cover -o server
+          cp server ../../test/integration/server
+          rm server
+
+      - name: Build integration tests
+        run: |
+          cd test/
+          go test -c -o test
+          cp test ./integration/test
+          rm test
+
+      - name: Apply migrations
+        run: |          
+          go install -tags 'postgres,sqlite' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          migrate -source file://server/migrations/postgres -database postgres://postgres:postgres@postgres:5432/gophkeeper?sslmode=disable up
+          migrate -source file://server/migrations/sqlite -database sqlite://vault.db up
+          cp vault.db ./test/integration/vault.db
+          rm vault.db
+
+      - name: "Run integration tests (postgres + sync map cache)"
+        run: |
+            cd ./test/integration/
+            mkdir cover
+            chmod +x server
+            chmod +x test
+            ./test
+        env:
+            TEST_GRPC_HOST: localhost
+            TEST_GRPC_PORT: 8081
+            TEST_MAIL_HOST: mailpit
+            TEST_MAIL_PORT: 8025
+            TEST_REDIS_HOST: redis
+            TEST_REDIS_PORT: 6379
+            TEST_BINARY_PATH: ./server
+            GOCOVERDIR: cover
+            GOPHKEEPER_SERVICE_STORAGE_URI: postgres://postgres:postgres@postgres:5432/gophkeeper?sslmode=disable
+            GOPHKEEPER_GRPC_KEY_FILE_NAME: key.pem
+            GOPHKEEPER_GRPC_CERT_FILE_NAME: cert.pem
+            GOPHKEEPER_GRPC_HOST: localhost
+            GOPHKEEPER_GRPC_PORT: 8081
+            GOPHKEEPER_SMTP_HOST: mailpit
+            GOPHKEEPER_SMTP_PORT: 1025
+            GOPHKEEPER_RTASK_STORAGE_URI: redis://redis:6379/1
+
+      - name: "Converting coverage to legacy text format"
+        if: ${{ success() }}
+        run: |
+          cd ./test/integration/
+          go tool covdata textfmt -i=cover -o integration_coverage_postgres.out
+          rm -rf cover
+          cd ./../
+          cp ./integration/integration_coverage_postgres.out integration_coverage_postgres.out
+        env:
+            GOCOVERDIR: cover
+
+      - name: "Run integration tests (sqlite + redis cache)"
+        run: |
+              cd ./test/integration/
+              mkdir cover
+              chmod +x server
+              chmod +x test
+              ./test
+        env:
+            TEST_GRPC_HOST: localhost
+            TEST_GRPC_PORT: 8081
+            TEST_MAIL_HOST: mailpit
+            TEST_MAIL_PORT: 8025
+            TEST_REDIS_HOST: redis
+            TEST_REDIS_PORT: 6379
+            TEST_BINARY_PATH: ./server
+            GOCOVERDIR: cover
+            GOPHKEEPER_SERVICE_STORAGE_URI: file:vault.db
+            GOPHKEEPER_GRPC_KEY_FILE_NAME: key.pem
+            GOPHKEEPER_GRPC_CERT_FILE_NAME: cert.pem
+            GOPHKEEPER_GRPC_HOST: localhost
+            GOPHKEEPER_GRPC_PORT: 8081
+            GOPHKEEPER_SMTP_HOST: mailpit
+            GOPHKEEPER_SMTP_PORT: 1025
+            GOPHKEEPER_SERVICE_AUTH_CACHE_URI: redis://redis:6379/2
+            GOPHKEEPER_SERVICE_MAIL_CACHE_URI: redis://redis:6379/3
+            GOPHKEEPER_RTASK_STORAGE_URI: redis://redis:6379/1
+    
+      - name: "Converting coverage to legacy text format"
+        if: ${{ success() }}
+        run: |
+            cd ./test/integration/
+            go tool covdata textfmt -i=cover -o integration_coverage_sqlite.out
+            rm -rf cover
+            cd ./../
+            cp ./integration/integration_coverage_sqlite.out integration_coverage_sqlite.out
+        env:
+            GOCOVERDIR: cover
+
+      - name: Run unit tests
+        run: |
+          cd ./test/
+          mkdir unit
+          cd ./../server
+          go test -tags fast -coverprofile unit_coverage.out -covermode atomic ./...          
+          cp unit_coverage.out ./../test/unit_coverage.out
+          rm unit_coverage.out
+
+      - name: Upload coverage report to Codecov
+        if: ${{ success() }}
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./test/integration_coverage_postgres.out,./test/integration_coverage_sqlite.out,./test/unit_coverage.out
+          token: ${{ secrets.CODECOV_TOKEN }}

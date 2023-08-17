@@ -1,0 +1,13 @@
+# Your email, auth hash and server token (not password!) 
+# can be stored in the following storage types:
+## All platforms: database
+## Windows: wincred
+## MacOS: keychain
+## Linux: pass, secret-service
+credentials_storage_type: "database"
+host: "localhost"
+port: "8080"
+# specify the filename if you want to use self-signed certificates
+cert_filename: "cert.pem"
+# root path for file picker, empty value means user home directory
+root_path: ""
