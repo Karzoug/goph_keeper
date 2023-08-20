@@ -78,6 +78,8 @@ message GetFileUploadURLResponse {
 message CompleteFileUploadRequest {
     bool is_successful = 1;
     repeated string etags = 2;
+    string id = 3;
+    string upload_id = 4;
 }
 
 message CompleteFileUploadResponse {
