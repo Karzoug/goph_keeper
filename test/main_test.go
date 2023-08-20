@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	pb "github.com/Karzoug/goph_keeper/common/grpc"
+	pb "github.com/Karzoug/goph_keeper/common/grpc/server"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 
 type client struct {
 	conn       *grpc.ClientConn
-	grpcClient pb.GophKeeperServiceClient
+	grpcClient pb.GophKeeperServerClient
 }
 
 func TestMain(m *testing.M) {

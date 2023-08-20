@@ -8,7 +8,7 @@ import (
 
 	"github.com/pioz/faker"
 
-	pb "github.com/Karzoug/goph_keeper/common/grpc"
+	pb "github.com/Karzoug/goph_keeper/common/grpc/server"
 )
 
 type AuthSuite struct {

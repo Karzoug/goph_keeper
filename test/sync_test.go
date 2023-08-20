@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	pb "github.com/Karzoug/goph_keeper/common/grpc"
+	pb "github.com/Karzoug/goph_keeper/common/grpc/server"
 	"github.com/Karzoug/goph_keeper/common/model/vault"
 )
 
@@ -23,7 +23,7 @@ type SyncVaultSuite struct {
 
 	token_2      string
 	conn_2       *grpc.ClientConn
-	grpcClient_2 pb.GophKeeperServiceClient
+	grpcClient_2 pb.GophKeeperServerClient
 }
 
 // SetupSuite bootstraps suite dependencies
@@ -43,7 +43,7 @@ func (suite *SyncVaultSuite) SetupSuite() {
 		return
 	}
 	suite.conn_2 = conn
-	suite.grpcClient_2 = pb.NewGophKeeperServiceClient(conn)
+	suite.grpcClient_2 = pb.NewGophKeeperServerClient(conn)
 }
 
 func (suite *SyncVaultSuite) TestVault() {

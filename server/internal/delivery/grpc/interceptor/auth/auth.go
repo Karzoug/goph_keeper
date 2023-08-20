@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	gerr "github.com/Karzoug/goph_keeper/common/grpc"
+	gerr "github.com/Karzoug/goph_keeper/common/grpc/server"
 	"github.com/Karzoug/goph_keeper/pkg/logger/slog/sl"
 	"github.com/Karzoug/goph_keeper/server/internal/service"
 )

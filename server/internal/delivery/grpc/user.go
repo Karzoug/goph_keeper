@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	pb "github.com/Karzoug/goph_keeper/common/grpc"
+	pb "github.com/Karzoug/goph_keeper/common/grpc/server"
 	"github.com/Karzoug/goph_keeper/pkg/logger/slog/sl"
 	"github.com/Karzoug/goph_keeper/server/internal/service"
 )

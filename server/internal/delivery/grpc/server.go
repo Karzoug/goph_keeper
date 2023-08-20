@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	pb "github.com/Karzoug/goph_keeper/common/grpc"
+	pb "github.com/Karzoug/goph_keeper/common/grpc/server"
 	"github.com/Karzoug/goph_keeper/pkg/e"
 	gcfg "github.com/Karzoug/goph_keeper/server/internal/config/grpc"
 	"github.com/Karzoug/goph_keeper/server/internal/delivery/grpc/interceptor/auth"
@@ -23,15 +23,15 @@ type server struct {
 	service *service.Service
 
 	grpcServer *grpc.Server
-	pb.UnimplementedGophKeeperServiceServer
+	pb.UnimplementedGophKeeperServerServer
 }
 
 func New(cfg gcfg.Config, service *service.Service, logger *slog.Logger) (*server, error) {
 	const op = "create grpc server"
 
 	publicMethods := []string{
-		pb.GophKeeperService_Register_FullMethodName,
-		pb.GophKeeperService_Login_FullMethodName,
+		pb.GophKeeperServer_Register_FullMethodName,
+		pb.GophKeeperServer_Login_FullMethodName,
 	}
 
 	tlsCfg, err := loadConfig(cfg.CertFileName, cfg.KeyFileName)
@@ -50,7 +50,7 @@ func New(cfg gcfg.Config, service *service.Service, logger *slog.Logger) (*serve
 		grpcServer: grpcServer,
 	}
 
-	pb.RegisterGophKeeperServiceServer(ss.grpcServer, ss)
+	pb.RegisterGophKeeperServerServer(ss.grpcServer, ss)
 
 	return ss, nil
 }
@@ -99,6 +99,5 @@ func loadConfig(certFilename, keyFilename string) (*tls.Config, error) {
 	return &tls.Config{
 		MinVersion:   tls.VersionTLS13,
 		Certificates: []tls.Certificate{serverCert},
-		ClientAuth:   tls.NoClientCert,
 	}, nil
 }

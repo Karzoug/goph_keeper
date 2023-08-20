@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package common.grpc.fstorage;
+
+option go_package = "common/grpc/fstorage";
+
+message GetFileDownloadURLRequest {
+    string email = 1;
+    string key = 2;
+}
+
+message GetFileDownloadURLResponse {
+    string url = 1;
+}
+
+message GetFileUploadURLRequest {
+    string email = 1;
+    string key = 2;
+    int64 size = 3;
+}
+
+message GetFileUploadURLResponse {
+    string upload_id = 1;
+    repeated string urls = 2;
+}
+
+message CompleteFileUploadRequest {
+    string email = 1;
+    string key = 2;
+    string upload_id = 3;
+    repeated string etags = 4;
+}
+
+message CompleteFileUploadResponse {
+}
+
+message AbortFileUploadRequest {
+    string email = 1;
+    string key = 2;
+    string upload_id = 3;
+}
+
+message AbortFileUploadResponse {
+}
+
+service GophKeeperFStorage {
+    rpc GetFileDownloadURL(GetFileDownloadURLRequest) returns (GetFileDownloadURLResponse);
+    rpc GetFileUploadURL(GetFileUploadURLRequest) returns (GetFileUploadURLResponse);
+    rpc CompleteFileUpload(CompleteFileUploadRequest) returns (CompleteFileUploadResponse);
+    rpc AbortFileUpload(AbortFileUploadRequest) returns (AbortFileUploadResponse);
+}

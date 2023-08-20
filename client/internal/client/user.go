@@ -11,7 +11,7 @@ import (
 
 	"github.com/Karzoug/goph_keeper/client/internal/model/auth"
 	"github.com/Karzoug/goph_keeper/client/pkg/crypto"
-	pb "github.com/Karzoug/goph_keeper/common/grpc"
+	pb "github.com/Karzoug/goph_keeper/common/grpc/server"
 )
 
 const MinPasswordLength = 8

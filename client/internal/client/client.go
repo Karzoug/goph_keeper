@@ -19,7 +19,7 @@ import (
 	"github.com/Karzoug/goph_keeper/client/internal/repository/storage"
 	"github.com/Karzoug/goph_keeper/client/internal/repository/storage/native"
 	sqlite "github.com/Karzoug/goph_keeper/client/internal/repository/storage/sqllite"
-	pb "github.com/Karzoug/goph_keeper/common/grpc"
+	pb "github.com/Karzoug/goph_keeper/common/grpc/server"
 	"github.com/Karzoug/goph_keeper/pkg/e"
 )
 
@@ -63,8 +63,7 @@ type Client struct {
 	storage            clientStorage
 	credentialsStorage clientCredentialsStorage
 	credentials        credentials
-	conn               *grpc.ClientConn
-	grpcClient         pb.GophKeeperServiceClient
+	grpcClient         pb.GophKeeperServerClient
 }
 
 func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Client, error) {
@@ -107,7 +106,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Client,
 		return nil, e.Wrap(op, err)
 	}
 
-	c.grpcClient = pb.NewGophKeeperServiceClient(c.conn)
+	c.grpcClient = pb.NewGophKeeperServerClient(conn)
 
 	return c, nil
 }

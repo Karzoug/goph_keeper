@@ -11,7 +11,7 @@ import (
 
 	"github.com/Karzoug/goph_keeper/client/internal/model/vault"
 	"github.com/Karzoug/goph_keeper/client/internal/repository/storage"
-	pb "github.com/Karzoug/goph_keeper/common/grpc"
+	pb "github.com/Karzoug/goph_keeper/common/grpc/server"
 	cvault "github.com/Karzoug/goph_keeper/common/model/vault"
 	"github.com/Karzoug/goph_keeper/pkg/logger/slog/sl"
 )

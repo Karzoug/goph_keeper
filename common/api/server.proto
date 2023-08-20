@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package common.grpc;
+package common.grpc.server;
 
-option go_package = "common/grpc";
+option go_package = "common/grpc/server";
 
 message RegisterRequest {
     string email = 1;
@@ -23,7 +23,7 @@ message LoginResponse {
 }
 
 enum IType {
-    UNKNOWN = 0;
+    ITYPE_UNKNOWN = 0;
     PASSWORD = 1;
     CARD = 2;
     TEXT = 3;
@@ -56,9 +56,39 @@ message SetVaultItemResponse {
     int64 server_updated_at = 1;
 }
 
-service GophKeeperService {
+message GetFileDownloadURLRequest {
+    string id = 1;
+}
+
+message GetFileDownloadURLResponse {
+    string upload_id = 1;
+    repeated string urls = 2;
+}
+
+message GetFileUploadURLRequest {
+    string id = 1;
+    int64 size = 2;
+}
+
+message GetFileUploadURLResponse {
+    string upload_id = 1;
+    repeated string urls = 2;
+}
+
+message CompleteFileUploadRequest {
+    bool is_successful = 1;
+    repeated string etags = 2;
+}
+
+message CompleteFileUploadResponse {
+}
+
+service GophKeeperServer {
     rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
     rpc ListVaultItems(ListVaultItemsRequest) returns (ListVaultItemsResponse);
     rpc SetVaultItem(SetVaultItemRequest) returns (SetVaultItemResponse);
+    rpc GetFileDownloadURL(GetFileDownloadURLRequest) returns (GetFileDownloadURLResponse);
+    rpc GetFileUploadURL(GetFileUploadURLRequest) returns (GetFileUploadURLResponse);
+    rpc CompleteFileUpload(CompleteFileUploadRequest) returns (CompleteFileUploadResponse);
 }

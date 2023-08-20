@@ -7,7 +7,7 @@ import (
 	"github.com/pioz/faker"
 	"github.com/rs/xid"
 
-	pb "github.com/Karzoug/goph_keeper/common/grpc"
+	pb "github.com/Karzoug/goph_keeper/common/grpc/server"
 	"github.com/Karzoug/goph_keeper/common/model/vault"
 )
 

@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	pb "github.com/Karzoug/goph_keeper/common/grpc"
+	pb "github.com/Karzoug/goph_keeper/common/grpc/server"
 	"github.com/Karzoug/goph_keeper/test/internal/fork"
 )
 
@@ -36,7 +36,7 @@ type commonTestSuite struct {
 	envs        []string
 
 	conn       *grpc.ClientConn
-	grpcClient pb.GophKeeperServiceClient
+	grpcClient pb.GophKeeperServerClient
 	authHash   []byte
 	email      string
 	token      string
@@ -83,7 +83,7 @@ func (suite *commonTestSuite) SetupSuite() {
 		return
 	}
 
-	grpcClient := pb.NewGophKeeperServiceClient(conn)
+	grpcClient := pb.NewGophKeeperServerClient(conn)
 	suite.conn = conn
 	suite.grpcClient = grpcClient
 
