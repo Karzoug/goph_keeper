@@ -6,7 +6,6 @@ const (
 	Card
 	Text
 	Binary
-	BinaryLarge
 )
 
 type ItemType int32

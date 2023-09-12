@@ -28,7 +28,6 @@ enum IType {
     CARD = 2;
     TEXT = 3;
     BINARY = 4;
-    BINARY_LARGE = 5;
 }
 
 message VaultItem {
@@ -58,31 +57,38 @@ message SetVaultItemResponse {
 
 message GetFileDownloadURLRequest {
     string id = 1;
+    int64 since  = 2;
 }
 
 message GetFileDownloadURLResponse {
-    string upload_id = 1;
-    repeated string urls = 2;
+    string url = 1;
 }
 
-message GetFileUploadURLRequest {
+message GetFileUploadURLsRequest {
     string id = 1;
     int64 size = 2;
 }
 
-message GetFileUploadURLResponse {
+message GetFileUploadURLsResponse {
     string upload_id = 1;
     repeated string urls = 2;
 }
 
 message CompleteFileUploadRequest {
-    bool is_successful = 1;
-    repeated string etags = 2;
-    string id = 3;
-    string upload_id = 4;
+    repeated string etags = 1;
+    string id = 2;
+    string upload_id = 3;
 }
 
 message CompleteFileUploadResponse {
+}
+
+message AbortFileUploadRequest {
+    string id = 1;
+    string upload_id = 2;
+}
+
+message AbortFileUploadResponse {
 }
 
 service GophKeeperServer {
@@ -91,6 +97,7 @@ service GophKeeperServer {
     rpc ListVaultItems(ListVaultItemsRequest) returns (ListVaultItemsResponse);
     rpc SetVaultItem(SetVaultItemRequest) returns (SetVaultItemResponse);
     rpc GetFileDownloadURL(GetFileDownloadURLRequest) returns (GetFileDownloadURLResponse);
-    rpc GetFileUploadURL(GetFileUploadURLRequest) returns (GetFileUploadURLResponse);
+    rpc GetFileUploadURLs(GetFileUploadURLsRequest) returns (GetFileUploadURLsResponse);
     rpc CompleteFileUpload(CompleteFileUploadRequest) returns (CompleteFileUploadResponse);
+    rpc AbortFileUpload(AbortFileUploadRequest) returns (AbortFileUploadResponse);
 }
