@@ -1,4 +1,4 @@
-package grpc
+package server
 
 import (
 	"google.golang.org/grpc/codes"
@@ -33,4 +33,10 @@ var (
 	ErrVaultItemConflictVersion = status.Error(codes.InvalidArgument, "vault item: conflict version")
 	// ErrVaultItemValueTooBig returned if the client is trying to send large data using an inappropriate method.
 	ErrVaultItemValueTooBig = status.Error(codes.OutOfRange, "vault item: big value")
+	// ErrLimitVaultSizeExceeded returned if the client vault is full, the limit is exceeded.
+	ErrLimitVaultSizeExceeded = status.Error(codes.ResourceExhausted, "limit vault size exceeded")
+	// ErrLimitFileSizeExceeded returned if the file size sent by the user is too big, the limit is exceeded.
+	ErrLimitFileSizeExceeded = status.Error(codes.OutOfRange, "limit file size exceeded")
+	// ErrFileNotFound returned if the file is not found.
+	ErrFileNotFound = status.Error(codes.NotFound, "file not found")
 )

@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package common.grpc.server;
+
+option go_package = "common/grpc/server";
+
+message RegisterRequest {
+    string email = 1;
+    bytes  hash = 2;
+}
+
+message RegisterResponse {
+}
+
+message LoginRequest {
+    string email = 1;
+    bytes  hash = 2;
+    string email_code = 3;
+}
+
+message LoginResponse {
+    string token = 1;
+}
+
+enum IType {
+    ITYPE_UNKNOWN = 0;
+    PASSWORD = 1;
+    CARD = 2;
+    TEXT = 3;
+    BINARY = 4;
+}
+
+message VaultItem {
+    string id   = 1;
+    string name = 2;
+    IType itype = 3;
+    bytes value = 4;
+    int64 server_updated_at = 5;
+    bool is_deleted = 6;
+}
+
+message ListVaultItemsRequest {
+    int64 since = 1;
+}
+
+message ListVaultItemsResponse {
+    repeated VaultItem items = 1;
+}
+
+message SetVaultItemRequest {
+    VaultItem item = 1;
+}
+
+message SetVaultItemResponse {
+    int64 server_updated_at = 1;
+}
+
+message GetFileDownloadURLRequest {
+    string id = 1;
+    int64 since  = 2;
+}
+
+message GetFileDownloadURLResponse {
+    string url = 1;
+}
+
+message GetFileUploadURLsRequest {
+    string id = 1;
+    int64 size = 2;
+}
+
+message GetFileUploadURLsResponse {
+    string upload_id = 1;
+    repeated string urls = 2;
+}
+
+message CompleteMultipartFileUploadRequest {
+    repeated string etags = 1;
+    string id = 2;
+    string upload_id = 3;
+}
+
+message CompleteMultipartFileUploadResponse {
+}
+
+message AbortMultipartFileUploadRequest {
+    string id = 1;
+    string upload_id = 2;
+}
+
+message AbortMultipartFileUploadResponse {
+}
+
+service GophKeeperServer {
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc Login(LoginRequest) returns (LoginResponse);
+    rpc ListVaultItems(ListVaultItemsRequest) returns (ListVaultItemsResponse);
+    rpc SetVaultItem(SetVaultItemRequest) returns (SetVaultItemResponse);
+    rpc GetFileDownloadURL(GetFileDownloadURLRequest) returns (GetFileDownloadURLResponse);
+    rpc GetFileUploadURLs(GetFileUploadURLsRequest) returns (GetFileUploadURLsResponse);
+    rpc CompleteMultipartFileUpload(CompleteMultipartFileUploadRequest) returns (CompleteMultipartFileUploadResponse);
+    rpc AbortMultipartFileUpload(AbortMultipartFileUploadRequest) returns (AbortMultipartFileUploadResponse);
+}
